@@ -80,7 +80,6 @@
           }
 
   - do:
-      catch: /No compatible fields could be detected in index \[empty-index\]/
       ml.start_data_frame_analytics:
         id: "foo"
 
