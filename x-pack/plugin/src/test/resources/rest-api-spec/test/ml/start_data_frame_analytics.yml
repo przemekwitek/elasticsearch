@@ -54,6 +54,37 @@
         id: "foo"
 
 ---
+"Test start given source index has compatible fields but is empty":
+
+  - do:
+      indices.create:
+        index: empty-index
+        body:
+          mappings:
+            properties:
+              total:
+                type: long
+
+  - do:
+      ml.put_data_frame_analytics:
+        id: "foo"
+        body: >
+          {
+            "source": {
+              "index": "empty-index"
+            },
+            "dest": {
+              "index": "empty-index-dest"
+            },
+            "analysis": {"outlier_detection":{}}
+          }
+
+  - do:
+      catch: /No compatible fields could be detected in index \[empty-index\]/
+      ml.start_data_frame_analytics:
+        id: "foo"
+
+---
 "Test start with inconsistent body/param ids":
 
   - do:
