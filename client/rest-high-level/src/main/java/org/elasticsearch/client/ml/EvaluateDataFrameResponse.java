@@ -29,11 +29,14 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentParserUtils;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.xcontent.ConstructingObjectParser.constructorArg;
 
@@ -48,30 +51,32 @@ public class EvaluateDataFrameResponse implements ToXContentObject {
     @SuppressWarnings("unchecked")
     private static ConstructingObjectParser<EvaluateDataFrameResponse, Void> PARSER =
         new ConstructingObjectParser<>(
-            "evaluate_data_frame_response", true, args -> new EvaluateDataFrameResponse((Map<String, EvaluationMetric.Result>) args[0]));
+            "evaluate_data_frame_response", true, args -> new EvaluateDataFrameResponse((List<EvaluationMetric.Result>) args[0]));
 
     static {
-        PARSER.declareObject(constructorArg(), (p, c) -> parseSoftClassificationMetrics(p), SOFT_CLASSIFICATION_METRICS);
+        PARSER.declareNamedObjects(constructorArg(), (p, c, n) -> parseMetric(p, n), SOFT_CLASSIFICATION_METRICS);
     }
 
-    private static Map<String, EvaluationMetric.Result> parseSoftClassificationMetrics(XContentParser parser) throws IOException {
-        Map<String, EvaluationMetric.Result> metrics = parser.genericMapOrdered((p, n) -> {
-            try {
-                return p.namedObject(EvaluationMetric.Result.class, n, null);
-            } catch (NamedObjectNotFoundException e) {
-                parser.skipChildren();
-                return null;
-            }
-        });
-        // Remove null values as those come from {@link NamedObjectNotFoundException} being thrown and we do want to ignore unknown metrics.
-        metrics.values().removeIf(Objects::isNull);
-        return metrics;
+    private static EvaluationMetric.Result parseMetric(XContentParser parser, String fieldName) throws IOException {
+        XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, parser.currentToken(), parser::getTokenLocation);
+        parser.nextToken();
+        try {
+            return parser.namedObject(EvaluationMetric.Result.class, fieldName, null);
+        } catch (NamedObjectNotFoundException e) {
+            parser.skipChildren();
+            // Metric name not recognized. Return {@code null} value here and filter it out later.
+            return null;
+        }
     }
 
     private final Map<String, EvaluationMetric.Result> metrics;
 
-    public EvaluateDataFrameResponse(Map<String, EvaluationMetric.Result> metrics) {
-        this.metrics = Objects.requireNonNull(metrics);
+    public EvaluateDataFrameResponse(List<EvaluationMetric.Result> metrics) {
+        Objects.requireNonNull(metrics);
+        // Convert List to Map so that lookups done by {@link EvaluateDataFrameResponse::getMetricByName} methods are fast.
+        this.metrics = metrics.stream()
+            .filter(Objects::nonNull)  // Filter out null values returned by {@link EvaluateDataFrameResponse::parseMetric}.
+            .collect(Collectors.toMap(r -> r.getMetricName(), r -> r));
     }
 
     public String getEvaluationName() {

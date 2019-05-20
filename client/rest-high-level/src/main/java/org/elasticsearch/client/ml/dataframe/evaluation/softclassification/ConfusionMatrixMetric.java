@@ -80,7 +80,7 @@ public class ConfusionMatrixMetric extends AbstractConfusionMatrixMetric {
     public static class Result implements EvaluationMetric.Result {
 
         public static Result fromXContent(XContentParser parser) throws IOException {
-            return new Result(parser.genericMapOrdered((p, k) -> ConfusionMatrix.fromXContent(p)));
+            return new Result(parser.genericMapOrdered(p -> ConfusionMatrix.fromXContent(p)));
         }
 
         private final Map<String, ConfusionMatrix> results;

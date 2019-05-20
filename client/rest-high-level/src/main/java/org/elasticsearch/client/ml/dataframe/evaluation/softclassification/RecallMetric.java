@@ -78,7 +78,7 @@ public class RecallMetric extends AbstractConfusionMatrixMetric {
     public static class Result implements EvaluationMetric.Result {
 
         public static Result fromXContent(XContentParser parser) throws IOException {
-            return new Result(parser.genericMapOrdered((p, k) -> p.doubleValue()));
+            return new Result(parser.genericMapOrdered(p -> p.doubleValue()));
         }
 
         private final Map<String, Double> results;

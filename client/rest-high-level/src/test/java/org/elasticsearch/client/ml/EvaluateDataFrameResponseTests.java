@@ -18,28 +18,34 @@
  */
 package org.elasticsearch.client.ml;
 
+import org.elasticsearch.client.ml.dataframe.evaluation.EvaluationMetric;
 import org.elasticsearch.client.ml.dataframe.evaluation.MlEvaluationNamedXContentProvider;
-import org.elasticsearch.client.ml.dataframe.evaluation.softclassification.AucRocMetric;
-import org.elasticsearch.client.ml.dataframe.evaluation.softclassification.ConfusionMatrixMetric;
-import org.elasticsearch.client.ml.dataframe.evaluation.softclassification.PrecisionMetric;
-import org.elasticsearch.client.ml.dataframe.evaluation.softclassification.RecallMetric;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.test.AbstractXContentTestCase;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 
 public class EvaluateDataFrameResponseTests extends AbstractXContentTestCase<EvaluateDataFrameResponse> {
 
     public static EvaluateDataFrameResponse randomResponse() {
-        return new EvaluateDataFrameResponse(
-            Map.of(
-                AucRocMetric.NAME, AucRocMetricResultTests.randomResult(),
-                PrecisionMetric.NAME, PrecisionMetricResultTests.randomResult(),
-                RecallMetric.NAME, RecallMetricResultTests.randomResult(),
-                ConfusionMatrixMetric.NAME, ConfusionMatrixMetricResultTests.randomResult()));
+        List<EvaluationMetric.Result> metrics = new ArrayList<>();
+        if (randomBoolean()) {
+            metrics.add(AucRocMetricResultTests.randomResult());
+        }
+        if (randomBoolean()) {
+            metrics.add(PrecisionMetricResultTests.randomResult());
+        }
+        if (randomBoolean()) {
+            metrics.add(RecallMetricResultTests.randomResult());
+        }
+        if (randomBoolean()) {
+            metrics.add(ConfusionMatrixMetricResultTests.randomResult());
+        }
+        return new EvaluateDataFrameResponse(metrics);
     }
 
     @Override
