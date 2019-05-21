@@ -32,6 +32,7 @@ import org.elasticsearch.common.xcontent.XContentParserUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,7 +64,7 @@ public class EvaluateDataFrameRequest implements ToXContentObject, Validatable {
         return PARSER.apply(parser, null);
     }
 
-    private String[] indices;
+    private List<String> indices;
     private Evaluation evaluation;
 
     public EvaluateDataFrameRequest(String index, Evaluation evaluation) {
@@ -75,13 +76,13 @@ public class EvaluateDataFrameRequest implements ToXContentObject, Validatable {
         setEvaluation(evaluation);
     }
 
-    public String[] getIndices() {
-        return indices;
+    public List<String> getIndices() {
+        return Collections.unmodifiableList(indices);
     }
 
     public final void setIndices(List<String> indices) {
         Objects.requireNonNull(indices);
-        this.indices = indices.toArray(new String[indices.size()]);
+        this.indices = new ArrayList<>(indices);
     }
 
     public Evaluation getEvaluation() {
@@ -95,7 +96,7 @@ public class EvaluateDataFrameRequest implements ToXContentObject, Validatable {
     @Override
     public Optional<ValidationException> validate() {
         List<String> errors = new ArrayList<>();
-        if (indices == null || indices.length == 0) {
+        if (indices.isEmpty()) {
             errors.add("At least one index must be specified");
         }
         if (evaluation == null) {
@@ -108,18 +109,18 @@ public class EvaluateDataFrameRequest implements ToXContentObject, Validatable {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject();
-        builder.array(INDEX.getPreferredName(), indices);
-        builder.startObject(EVALUATION.getPreferredName());
-        builder.field(evaluation.getName(), evaluation);
-        builder.endObject();
-        builder.endObject();
-        return builder;
+        return builder
+            .startObject()
+                .array(INDEX.getPreferredName(), indices)
+                .startObject(EVALUATION.getPreferredName())
+                    .field(evaluation.getName(), evaluation)
+                .endObject()
+            .endObject();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(Arrays.hashCode(indices), evaluation);
+        return Objects.hash(indices, evaluation);
     }
 
     @Override
@@ -127,7 +128,7 @@ public class EvaluateDataFrameRequest implements ToXContentObject, Validatable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EvaluateDataFrameRequest that = (EvaluateDataFrameRequest) o;
-        return Arrays.equals(indices, that.indices)
+        return Objects.equals(indices, that.indices)
             && Objects.equals(evaluation, that.evaluation);
     }
 }

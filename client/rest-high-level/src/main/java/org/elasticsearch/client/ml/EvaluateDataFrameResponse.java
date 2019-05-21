@@ -104,8 +104,8 @@ public class EvaluateDataFrameResponse implements ToXContentObject {
     public boolean equals(Object o) {
         if (o == this) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        EvaluateDataFrameResponse other = (EvaluateDataFrameResponse) o;
-        return Objects.equals(metrics, other.metrics);
+        EvaluateDataFrameResponse that = (EvaluateDataFrameResponse) o;
+        return Objects.equals(metrics, that.metrics);
     }
 
     @Override
