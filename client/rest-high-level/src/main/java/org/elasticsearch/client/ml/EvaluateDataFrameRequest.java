@@ -111,7 +111,7 @@ public class EvaluateDataFrameRequest implements ToXContentObject, Validatable {
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder
             .startObject()
-                .array(INDEX.getPreferredName(), indices)
+                .array(INDEX.getPreferredName(), indices.toArray())
                 .startObject(EVALUATION.getPreferredName())
                     .field(evaluation.getName(), evaluation)
                 .endObject()
