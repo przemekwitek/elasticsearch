@@ -32,7 +32,6 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParserUtils;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -83,8 +82,8 @@ public class EvaluateDataFrameResponse implements ToXContentObject {
         return BinarySoftClassification.NAME;
     }
 
-    public Map<String, EvaluationMetric.Result> getMetrics() {
-        return Collections.unmodifiableMap(metrics);
+    public List<EvaluationMetric.Result> getMetrics() {
+        return metrics.values().stream().collect(Collectors.toUnmodifiableList());
     }
 
     @SuppressWarnings("unchecked")
