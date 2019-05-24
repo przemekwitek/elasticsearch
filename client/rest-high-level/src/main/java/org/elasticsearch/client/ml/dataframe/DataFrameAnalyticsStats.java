@@ -24,7 +24,6 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.inject.internal.ToStringBuilder;
 import org.elasticsearch.common.xcontent.ConstructingObjectParser;
-import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
@@ -56,12 +55,7 @@ public class DataFrameAnalyticsStats {
 
     static {
         PARSER.declareString(constructorArg(), ID);
-        PARSER.declareField(constructorArg(), p -> {
-            if (p.currentToken() == XContentParser.Token.VALUE_STRING) {
-                return DataFrameAnalyticsState.fromString(p.text());
-            }
-            throw new IllegalArgumentException("Unsupported token [" + p.currentToken() + "]");
-        }, STATE, ObjectParser.ValueType.STRING);
+        PARSER.declareEnumValue(constructorArg(), DataFrameAnalyticsState::fromString, STATE);
         PARSER.declareInt(optionalConstructorArg(), PROGRESS_PERCENT);
         PARSER.declareObject(optionalConstructorArg(), NodeAttributes.PARSER, NODE);
         PARSER.declareString(optionalConstructorArg(), ASSIGNMENT_EXPLANATION);

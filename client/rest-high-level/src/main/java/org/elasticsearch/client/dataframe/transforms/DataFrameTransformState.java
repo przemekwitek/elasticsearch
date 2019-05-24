@@ -55,8 +55,8 @@ public class DataFrameTransformState {
                         (DataFrameTransformProgress) args[5]));
 
     static {
-        PARSER.declareField(constructorArg(), p -> DataFrameTransformTaskState.fromString(p.text()), TASK_STATE, ValueType.STRING);
-        PARSER.declareField(constructorArg(), p -> IndexerState.fromString(p.text()), INDEXER_STATE, ValueType.STRING);
+        PARSER.declareEnumValue(constructorArg(), DataFrameTransformTaskState::fromString, TASK_STATE);
+        PARSER.declareEnumValue(constructorArg(), IndexerState::fromString, INDEXER_STATE);
         PARSER.declareField(optionalConstructorArg(), (p, c) -> p.mapOrdered(), CURRENT_POSITION, ValueType.OBJECT);
         PARSER.declareLong(ConstructingObjectParser.optionalConstructorArg(), CHECKPOINT);
         PARSER.declareString(ConstructingObjectParser.optionalConstructorArg(), REASON);

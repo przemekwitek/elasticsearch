@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Superclass for {@link ObjectParser} and {@link ConstructingObjectParser}. Defines most of the "declare" methods so they can be shared.
@@ -210,6 +211,23 @@ public abstract class AbstractObjectParser<Value, Context>
     public <T> void declareFieldArray(BiConsumer<Value, List<T>> consumer, ContextParser<Context, T> itemParser,
                                       ParseField field, ValueType type) {
         declareField(consumer, (p, c) -> parseArray(p, () -> itemParser.parse(p, c)), field, type);
+    }
+
+    /**
+     * Declares a field that can contain a value of enum type
+     */
+    public <T extends Enum<T>> void declareEnumValue(
+            BiConsumer<Value, T> consumer, Function<String, T> enumValueParser, ParseField parseField) {
+        declareField(
+            consumer,
+            p -> {
+                if (p.currentToken() == XContentParser.Token.VALUE_STRING) {
+                    return enumValueParser.apply(p.text());
+                }
+                throw new IllegalArgumentException("Unsupported token [" + p.currentToken() + "]");
+            },
+            parseField,
+            ObjectParser.ValueType.STRING);
     }
 
     private interface IOSupplier<T> {

@@ -52,12 +52,7 @@ public class OutlierDetection implements DataFrameAnalysis {
 
     static {
         PARSER.declareInt(Builder::setNNeighbors, N_NEIGHBORS);
-        PARSER.declareField(Builder::setMethod, p -> {
-            if (p.currentToken() == XContentParser.Token.VALUE_STRING) {
-                return Method.fromString(p.text());
-            }
-            throw new IllegalArgumentException("Unsupported token [" + p.currentToken() + "]");
-        }, METHOD, ObjectParser.ValueType.STRING);
+        PARSER.declareEnumValue(Builder::setMethod, Method::fromString, METHOD);
     }
 
     private final Integer nNeighbors;
