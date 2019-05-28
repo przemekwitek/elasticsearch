@@ -25,6 +25,7 @@ import org.elasticsearch.xpack.core.ml.job.process.autodetect.output.FlushAcknow
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshot;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.Quantiles;
+import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.CategoryDefinition;
@@ -89,13 +90,18 @@ public class AutoDetectResultProcessor {
      */
     private volatile ModelSizeStats latestModelSizeStats;
 
+    private volatile TimingStats timingStats;
+
     public AutoDetectResultProcessor(Client client, Auditor auditor, String jobId, Renormalizer renormalizer,
-                                     JobResultsPersister persister, ModelSizeStats latestModelSizeStats) {
-        this(client, auditor, jobId, renormalizer, persister, latestModelSizeStats, new FlushListener());
+                                     JobResultsPersister persister,
+                                     ModelSizeStats latestModelSizeStats,
+                                     TimingStats timingStats) {
+        this(client, auditor, jobId, renormalizer, persister, latestModelSizeStats, timingStats, new FlushListener());
     }
 
     AutoDetectResultProcessor(Client client, Auditor auditor, String jobId, Renormalizer renormalizer,
-                              JobResultsPersister persister, ModelSizeStats latestModelSizeStats, FlushListener flushListener) {
+                              JobResultsPersister persister, ModelSizeStats latestModelSizeStats, TimingStats timingStats,
+                              FlushListener flushListener) {
         this.client = Objects.requireNonNull(client);
         this.auditor = Objects.requireNonNull(auditor);
         this.jobId = Objects.requireNonNull(jobId);
@@ -103,6 +109,7 @@ public class AutoDetectResultProcessor {
         this.persister = Objects.requireNonNull(persister);
         this.flushListener = Objects.requireNonNull(flushListener);
         this.latestModelSizeStats = Objects.requireNonNull(latestModelSizeStats);
+        this.timingStats = Objects.requireNonNull(timingStats);
     }
 
     public void process(AutodetectProcess process) {
@@ -195,6 +202,9 @@ public class AutoDetectResultProcessor {
             // persist after deleting interim results in case the new
             // results are also interim
             context.bulkResultsPersister.persistBucket(bucket).executeRequest();
+            timingStats.incrementTotalBucketProcessingTimeMs(bucketCount, bucket.getProcessingTimeMs());
+            persister.persistTimingStats(timingStats);
+
             ++bucketCount;
         }
         List<AnomalyRecord> records = result.getRecords();

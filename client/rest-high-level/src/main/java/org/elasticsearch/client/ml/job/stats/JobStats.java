@@ -101,7 +101,7 @@ public class JobStats implements ToXContentObject {
 
     JobStats(String jobId, DataCounts dataCounts, JobState state, @Nullable ModelSizeStats modelSizeStats,
                     @Nullable ForecastStats forecastStats, @Nullable NodeAttributes node,
-                    @Nullable String assignmentExplanation, @Nullable TimeValue opentime) {
+                    @Nullable String assignmentExplanation, @Nullable TimeValue openTime) {
         this.jobId = Objects.requireNonNull(jobId);
         this.dataCounts = Objects.requireNonNull(dataCounts);
         this.state = Objects.requireNonNull(state);
@@ -109,7 +109,7 @@ public class JobStats implements ToXContentObject {
         this.forecastStats = forecastStats;
         this.node = node;
         this.assignmentExplanation = assignmentExplanation;
-        this.openTime = opentime;
+        this.openTime = openTime;
     }
 
     /**

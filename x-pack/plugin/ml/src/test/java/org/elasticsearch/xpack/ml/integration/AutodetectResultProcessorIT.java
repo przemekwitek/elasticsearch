@@ -25,6 +25,7 @@ import org.elasticsearch.xpack.core.ml.job.process.autodetect.output.FlushAcknow
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshot;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.Quantiles;
+import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.CategoryDefinition;
@@ -89,7 +90,7 @@ public class AutodetectResultProcessorIT extends MlSingleNodeTestCase {
         renormalizer = mock(Renormalizer.class);
         capturedUpdateModelSnapshotOnJobRequests = new ArrayList<>();
         resultProcessor = new AutoDetectResultProcessor(client(), auditor, JOB_ID, renormalizer,
-                new JobResultsPersister(client()), new ModelSizeStats.Builder(JOB_ID).build()) {
+                new JobResultsPersister(client()), new ModelSizeStats.Builder(JOB_ID).build(), new TimingStats(JOB_ID)) {
             @Override
             protected void updateModelSnapshotOnJob(ModelSnapshot modelSnapshot) {
                 capturedUpdateModelSnapshotOnJobRequests.add(modelSnapshot);

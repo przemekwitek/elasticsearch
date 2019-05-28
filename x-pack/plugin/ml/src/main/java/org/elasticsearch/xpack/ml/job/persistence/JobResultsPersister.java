@@ -28,6 +28,7 @@ import org.elasticsearch.xpack.core.ml.job.persistence.ElasticsearchMappings;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshot;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.Quantiles;
+import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.BucketInfluencer;
@@ -219,6 +220,15 @@ public class JobResultsPersister {
         persistable.persist(AnomalyDetectorsIndex.resultsWriteAlias(category.getJobId())).actionGet();
         // Don't commit as we expect masses of these updates and they're not
         // read again by this process
+    }
+
+    /**
+     * Persist the timingStats (blocking)
+     */
+    public void persistTimingStats(TimingStats timingStats) {
+        String jobId = timingStats.getJobId();
+        Persistable persistable = new Persistable(jobId, timingStats, TimingStats.documentId(jobId));
+        persistable.persist(AnomalyDetectorsIndex.resultsWriteAlias(jobId)).actionGet();
     }
 
     /**

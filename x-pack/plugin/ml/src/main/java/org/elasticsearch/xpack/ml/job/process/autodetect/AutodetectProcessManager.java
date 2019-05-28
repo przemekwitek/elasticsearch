@@ -509,8 +509,15 @@ public class AutodetectProcessManager implements ClusterStateListener {
 
         AutodetectProcess process = autodetectProcessFactory.createAutodetectProcess(job, autodetectParams, autoDetectExecutorService,
                 onProcessCrash(jobTask));
-        AutoDetectResultProcessor processor = new AutoDetectResultProcessor(
-                client, auditor, jobId, renormalizer, jobResultsPersister, autodetectParams.modelSizeStats());
+        AutoDetectResultProcessor processor =
+            new AutoDetectResultProcessor(
+                client,
+                auditor,
+                jobId,
+                renormalizer,
+                jobResultsPersister,
+                autodetectParams.modelSizeStats(),
+                autodetectParams.timingStats());
         ExecutorService autodetectWorkerExecutor;
         try (ThreadContext.StoredContext ignore = threadPool.getThreadContext().stashContext()) {
             autodetectWorkerExecutor = createAutodetectExecutorService(autoDetectExecutorService);

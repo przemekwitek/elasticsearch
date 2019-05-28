@@ -27,6 +27,7 @@ import org.elasticsearch.xpack.core.ml.job.process.autodetect.output.FlushAcknow
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshot;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.Quantiles;
+import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.CategoryDefinition;
@@ -93,8 +94,15 @@ public class AutoDetectResultProcessorTests extends ESTestCase {
         when(persister.persistModelSnapshot(any(), any()))
                 .thenReturn(new IndexResponse(new ShardId("ml", "uid", 0), "doc", "1", 0L, 0L, 0L, true));
         flushListener = mock(FlushListener.class);
-        processorUnderTest = new AutoDetectResultProcessor(client, auditor, JOB_ID, renormalizer, persister,
-                new ModelSizeStats.Builder(JOB_ID).setTimestamp(new Date(BUCKET_SPAN_MS)).build(), flushListener);
+        processorUnderTest = new AutoDetectResultProcessor(
+            client,
+            auditor,
+            JOB_ID,
+            renormalizer,
+            persister,
+            new ModelSizeStats.Builder(JOB_ID).setTimestamp(new Date(BUCKET_SPAN_MS)).build(),
+            new TimingStats(JOB_ID),
+            flushListener);
     }
 
     @After
@@ -132,6 +140,7 @@ public class AutoDetectResultProcessorTests extends ESTestCase {
 
         verify(bulkBuilder, times(1)).persistBucket(bucket);
         verify(bulkBuilder, times(1)).executeRequest();
+        verify(persister).persistTimingStats(any(TimingStats.class));
         verify(persister, never()).deleteInterimResults(JOB_ID);
         verifyNoMoreInteractions(persister);
     }
@@ -150,6 +159,7 @@ public class AutoDetectResultProcessorTests extends ESTestCase {
 
         verify(bulkBuilder, times(1)).persistBucket(bucket);
         verify(bulkBuilder, times(1)).executeRequest();
+        verify(persister).persistTimingStats(any(TimingStats.class));
         verify(persister, times(1)).deleteInterimResults(JOB_ID);
         verifyNoMoreInteractions(persister);
         assertFalse(context.deleteInterimRequired);
