@@ -24,6 +24,7 @@ import org.elasticsearch.client.ml.job.process.DataCounts;
 import org.elasticsearch.client.ml.job.process.DataCountsTests;
 import org.elasticsearch.client.ml.job.process.ModelSizeStats;
 import org.elasticsearch.client.ml.job.process.ModelSizeStatsTests;
+import org.elasticsearch.client.ml.job.process.TimingStats;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.client.ml.job.config.JobState;
@@ -31,6 +32,7 @@ import org.elasticsearch.client.ml.job.config.JobTests;
 import org.elasticsearch.test.AbstractXContentTestCase;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.function.Predicate;
 
 
@@ -42,12 +44,14 @@ public class JobStatsTests extends AbstractXContentTestCase<JobStats> {
         DataCounts dataCounts = DataCountsTests.createTestInstance(jobId);
 
         ModelSizeStats modelSizeStats = randomBoolean() ? ModelSizeStatsTests.createRandomized() : null;
+        TimingStats timingStats = randomBoolean() ? new TimingStats(jobId, Duration.ofMillis(150)) : null;
         ForecastStats forecastStats = randomBoolean() ? ForecastStatsTests.createRandom(1, 22) : null;
         NodeAttributes nodeAttributes = randomBoolean() ? NodeAttributesTests.createRandom() : null;
         String assigmentExplanation = randomBoolean() ? randomAlphaOfLength(10) : null;
         TimeValue openTime = randomBoolean() ? TimeValue.timeValueMillis(randomIntBetween(1, 10000)) : null;
 
-        return new JobStats(jobId, dataCounts, state, modelSizeStats, forecastStats, nodeAttributes, assigmentExplanation, openTime);
+        return new JobStats(
+            jobId, dataCounts, state, modelSizeStats, timingStats, forecastStats, nodeAttributes, assigmentExplanation, openTime);
     }
 
     @Override
