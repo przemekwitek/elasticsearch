@@ -104,17 +104,19 @@ public class TransportGetJobsStatsAction extends TransportTasksAction<TransportO
         String jobId = task.getJobId();
         ClusterState state = clusterService.state();
         PersistentTasksCustomMetaData tasks = state.getMetaData().custom(PersistentTasksCustomMetaData.TYPE);
-        Optional<Tuple<DataCounts, ModelSizeStats>> stats = processManager.getStatistics(task);
+        Optional<Tuple<DataCounts, Tuple<ModelSizeStats, TimingStats>>> stats = processManager.getStatistics(task);
         if (stats.isPresent()) {
+            DataCounts dataCounts = stats.get().v1();
+            ModelSizeStats modelSizeStats = stats.get().v2().v1();
+            TimingStats timingStats = stats.get().v2().v2();
             PersistentTasksCustomMetaData.PersistentTask<?> pTask = MlTasks.getJobTask(jobId, tasks);
             DiscoveryNode node = state.nodes().get(pTask.getExecutorNode());
             JobState jobState = MlTasks.getJobState(jobId, tasks);
             String assignmentExplanation = pTask.getAssignment().getExplanation();
             TimeValue openTime = durationToTimeValue(processManager.jobOpenTime(task));
-            TimingStats timingStats = new TimingStats(jobId, 666.0);
             gatherForecastStats(jobId, forecastStats -> {
-                JobStats jobStats = new JobStats(jobId, stats.get().v1(),
-                        stats.get().v2(), forecastStats, jobState, node, assignmentExplanation, openTime, timingStats);
+                JobStats jobStats = new JobStats(
+                    jobId, dataCounts, modelSizeStats, forecastStats, jobState, node, assignmentExplanation, openTime, timingStats);
                 listener.onResponse(new QueryPage<>(Collections.singletonList(jobStats), 1, Job.RESULTS_FIELD));
             }, listener::onFailure);
 

@@ -30,10 +30,7 @@ public class TimingStats implements ToXContentObject, Writeable {
     public static final ParseField TYPE = new ParseField("timing_stats");
 
     public static final ConstructingObjectParser<TimingStats, Void> PARSER =
-        new ConstructingObjectParser<>(
-            TYPE.getPreferredName(),
-            true,
-            args -> new TimingStats((String) args[0], (double) args[1]));
+        new ConstructingObjectParser<>(TYPE.getPreferredName(), true, args -> new TimingStats((String) args[0], (double) args[1]));
 
     static {
         PARSER.declareString(constructorArg(), Job.ID);
@@ -53,17 +50,16 @@ public class TimingStats implements ToXContentObject, Writeable {
     }
 
     public TimingStats(String jobId) {
-        this.jobId = jobId;
+        this(jobId, 0);
     }
 
     public TimingStats(TimingStats lhs) {
-        jobId = lhs.jobId;
-        avgBucketProcessingTimeMs = lhs.avgBucketProcessingTimeMs;
+        this(lhs.jobId, lhs.avgBucketProcessingTimeMs);
     }
 
     public TimingStats(StreamInput in) throws IOException {
-        jobId = in.readString();
-        avgBucketProcessingTimeMs = in.readDouble();
+        this.jobId = in.readString();
+        this.avgBucketProcessingTimeMs = in.readOptionalDouble();
     }
 
     public String getJobId() {

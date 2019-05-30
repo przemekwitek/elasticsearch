@@ -406,16 +406,16 @@ public class JobResultsProvider {
     public void dataCounts(String jobId, Consumer<DataCounts> handler, Consumer<Exception> errorHandler) {
         String indexName = AnomalyDetectorsIndex.jobResultsAliasedName(jobId);
         searchSingleResult(jobId, DataCounts.TYPE.getPreferredName(), createLatestDataCountsSearch(indexName, jobId),
-            DataCounts.PARSER, result -> handler.accept(result.result), errorHandler, () -> new DataCounts(jobId));
+                DataCounts.PARSER, result -> handler.accept(result.result), errorHandler, () -> new DataCounts(jobId));
     }
 
     private SearchRequestBuilder createLatestDataCountsSearch(String indexName, String jobId) {
         return client.prepareSearch(indexName)
-            .setSize(1)
-            .setIndicesOptions(IndicesOptions.lenientExpandOpen())
-            // look for both old and new formats
-            .setQuery(QueryBuilders.idsQuery().addIds(DataCounts.documentId(jobId), DataCounts.v54DocumentId(jobId)))
-            .addSort(SortBuilders.fieldSort(DataCounts.LATEST_RECORD_TIME.getPreferredName()).order(SortOrder.DESC));
+                .setSize(1)
+                .setIndicesOptions(IndicesOptions.lenientExpandOpen())
+                // look for both old and new formats
+                .setQuery(QueryBuilders.idsQuery().addIds(DataCounts.documentId(jobId), DataCounts.v54DocumentId(jobId)))
+                .addSort(SortBuilders.fieldSort(DataCounts.LATEST_RECORD_TIME.getPreferredName()).order(SortOrder.DESC));
     }
 
     /**

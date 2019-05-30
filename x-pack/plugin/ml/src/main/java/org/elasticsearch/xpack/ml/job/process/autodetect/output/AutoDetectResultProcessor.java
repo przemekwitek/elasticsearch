@@ -417,5 +417,9 @@ public class AutoDetectResultProcessor {
     public ModelSizeStats modelSizeStats() {
         return latestModelSizeStats;
     }
+
+    public TimingStats timingStats() {
+        return timingStats;
+    }
 }
 

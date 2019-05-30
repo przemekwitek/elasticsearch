@@ -19,6 +19,7 @@ import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.DataCounts;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.DataCountsTests;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeStats;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
+import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStatsTests;
 import org.elasticsearch.xpack.core.ml.stats.ForecastStats;
 import org.elasticsearch.xpack.core.ml.stats.ForecastStatsTests;
 
@@ -68,10 +69,10 @@ public class GetJobStatsActionResponseTests extends AbstractWireSerializingTestC
             }
             TimingStats timingStats = null;
             if (randomBoolean()) {
-                timingStats = new TimingStats("foo", randomDouble());
+                timingStats = TimingStatsTests.createTestInstance("foo");
             }
-            Response.JobStats jobStats = new Response.JobStats(jobId, dataCounts, sizeStats, forecastStats, jobState, node, explanation,
-                    openTime, timingStats);
+            Response.JobStats jobStats =
+                new Response.JobStats(jobId, dataCounts, sizeStats, forecastStats, jobState, node, explanation, openTime, timingStats);
             jobStatsList.add(jobStats);
         }
 

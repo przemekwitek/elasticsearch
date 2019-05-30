@@ -6,29 +6,41 @@
 package org.elasticsearch.xpack.ml.job.persistence;
 
 import org.elasticsearch.action.ActionFuture;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.support.ContextPreservingActionListener;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.BucketInfluencer;
 import org.elasticsearch.xpack.core.ml.job.results.Influencer;
 import org.elasticsearch.xpack.core.ml.job.results.ModelPlot;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.contains;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -191,6 +203,35 @@ public class JobResultsPersisterTests extends ESTestCase {
         }
 
         verify(client, times(1)).bulk(any());
+        verify(client, times(1)).threadPool();
+        verifyNoMoreInteractions(client);
+    }
+
+    public void testPersistTimingStats() {
+        Client client = mock(Client.class);
+        ThreadPool threadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(threadPool);
+        when(threadPool.getThreadContext()).thenReturn(new ThreadContext(Settings.EMPTY));
+        ActionFuture<IndexResponse> future = mock(ActionFuture.class);
+        IndexResponse indexResponse = mock(IndexResponse.class);
+        ArgumentCaptor<IndexRequest> indexRequestCaptor = ArgumentCaptor.forClass(IndexRequest.class);
+        when(future.actionGet()).thenReturn(indexResponse);
+        doAnswer((Answer<Void>) invocation -> {
+            ((ContextPreservingActionListener<IndexResponse>) invocation.getArguments()[1]).onResponse(indexResponse);
+            return null;
+        }).when(client).index(any(), any());
+
+        JobResultsPersister persister = new JobResultsPersister(client);
+
+        TimingStats timingStats = new TimingStats("foo", 1.23);
+        persister.persistTimingStats(timingStats);
+
+        verify(client, times(1)).index(indexRequestCaptor.capture(), any());
+        IndexRequest indexRequest = indexRequestCaptor.getValue();
+        assertThat(indexRequest.index(), equalTo(".ml-anomalies-.write-foo"));
+        assertThat(indexRequest.id(), equalTo("foo_timing_stats"));
+        assertThat(indexRequest.sourceAsMap(), equalTo(Map.of("job_id", "foo", "average_bucket_processing_time_ms", 1.23)));
+
         verify(client, times(1)).threadPool();
         verifyNoMoreInteractions(client);
     }
