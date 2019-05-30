@@ -60,11 +60,11 @@ public class JobStats implements ToXContentObject {
                 JobState jobState = (JobState) a[i++];
                 ModelSizeStats.Builder modelSizeStatsBuilder = (ModelSizeStats.Builder) a[i++];
                 ModelSizeStats modelSizeStats = modelSizeStatsBuilder == null ? null : modelSizeStatsBuilder.build();
+                TimingStats timingStats = (TimingStats) a[i++];
                 ForecastStats forecastStats = (ForecastStats) a[i++];
                 NodeAttributes node = (NodeAttributes) a[i++];
                 String assignmentExplanation = (String) a[i++];
-                TimeValue openTime = (TimeValue) a[i++];
-                TimingStats timingStats = (TimingStats) a[i];
+                TimeValue openTime = (TimeValue) a[i];
                 return new JobStats(jobId,
                     dataCounts,
                     jobState,

@@ -10,7 +10,6 @@ import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Objects;
 
 import static org.elasticsearch.common.xcontent.ConstructingObjectParser.constructorArg;
@@ -23,10 +22,7 @@ public class TimingStats implements ToXContentObject {
     public static final ParseField AVG_BUCKET_PROCESSING_TIME_MS = new ParseField("average_bucket_processing_time_ms");
 
     public static final ConstructingObjectParser<TimingStats, Void> PARSER =
-        new ConstructingObjectParser<>(
-            "timing_stats",
-            true,
-            args -> new TimingStats((String) args[0], Duration.ofMillis((long) args[1])));
+        new ConstructingObjectParser<>("timing_stats", true, args -> new TimingStats((String) args[0], (double) args[1]));
 
     static {
         PARSER.declareString(constructorArg(), Job.ID);
@@ -34,19 +30,19 @@ public class TimingStats implements ToXContentObject {
     }
 
     private final String jobId;
-    private final Duration avgBucketProcessingTime;
+    private double avgBucketProcessingTimeMs;
 
-    public TimingStats(String jobId, @Nullable Duration avgBucketProcessingTime) {
+    public TimingStats(String jobId, double avgBucketProcessingTimeMs) {
         this.jobId = jobId;
-        this.avgBucketProcessingTime = avgBucketProcessingTime;
+        this.avgBucketProcessingTimeMs = avgBucketProcessingTimeMs;
     }
 
     public String getJobId() {
         return jobId;
     }
 
-    public Duration getAvgBucketProcessingTime() {
-        return avgBucketProcessingTime;
+    public double getAvgBucketProcessingTimeMs() {
+        return avgBucketProcessingTimeMs;
     }
 
     @Override
@@ -54,7 +50,7 @@ public class TimingStats implements ToXContentObject {
         return builder
             .startObject()
             .field(Job.ID.getPreferredName(), jobId)
-            .field(AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), avgBucketProcessingTime)
+            .field(AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), avgBucketProcessingTimeMs)
             .endObject();
     }
 
@@ -64,12 +60,12 @@ public class TimingStats implements ToXContentObject {
         if (o == null || getClass() != o.getClass()) return false;
         TimingStats that = (TimingStats) o;
         return Objects.equals(this.jobId, that.jobId)
-            && Objects.equals(this.avgBucketProcessingTime, that.avgBucketProcessingTime);
+            && this.avgBucketProcessingTimeMs == that.avgBucketProcessingTimeMs;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(jobId, avgBucketProcessingTime);
+        return Objects.hash(jobId, avgBucketProcessingTimeMs);
     }
 
     @Override
