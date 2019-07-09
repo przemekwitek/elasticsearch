@@ -33,57 +33,57 @@ public class DatafeedTimingStatsReporterTests extends ESTestCase {
 
     public void testReportSearchDuration() {
         DatafeedTimingStatsReporter timingStatsReporter =
-            new DatafeedTimingStatsReporter(new DatafeedTimingStats(JOB_ID, 3, 10000.0), jobResultsPersister);
-        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 3, 10000.0)));
+            new DatafeedTimingStatsReporter(new DatafeedTimingStats(JOB_ID, 3, 10000.0, 10.0), jobResultsPersister);
+        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 3, 10000.0, 10.0)));
 
         timingStatsReporter.reportSearchDuration(ONE_SECOND);
-        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 4, 11000.0)));
+        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 4, 11000.0, 10.0)));
 
         timingStatsReporter.reportSearchDuration(ONE_SECOND);
-        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 5, 12000.0)));
+        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 5, 12000.0, 10.0)));
 
         timingStatsReporter.reportSearchDuration(ONE_SECOND);
-        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 6, 13000.0)));
+        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 6, 13000.0, 10.0)));
 
         timingStatsReporter.reportSearchDuration(ONE_SECOND);
-        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 7, 14000.0)));
+        assertThat(timingStatsReporter.getCurrentTimingStats(), equalTo(new DatafeedTimingStats(JOB_ID, 7, 14000.0, 10.0)));
 
         InOrder inOrder = inOrder(jobResultsPersister);
         inOrder.verify(jobResultsPersister).persistDatafeedTimingStats(
-            new DatafeedTimingStats(JOB_ID, 5, 12000.0), RefreshPolicy.IMMEDIATE);
+            new DatafeedTimingStats(JOB_ID, 5, 12000.0, 10.0), RefreshPolicy.IMMEDIATE);
         inOrder.verify(jobResultsPersister).persistDatafeedTimingStats(
-            new DatafeedTimingStats(JOB_ID, 7, 14000.0), RefreshPolicy.IMMEDIATE);
+            new DatafeedTimingStats(JOB_ID, 7, 14000.0, 10.0), RefreshPolicy.IMMEDIATE);
         verifyNoMoreInteractions(jobResultsPersister);
     }
 
     public void testTimingStatsDifferSignificantly() {
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 1000.0), new DatafeedTimingStats(JOB_ID, 5, 1000.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 1000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 1000.0, 10.0)),
             is(false));
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 1000.0), new DatafeedTimingStats(JOB_ID, 5, 1100.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 1000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 1100.0, 10.0)),
             is(false));
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 1000.0), new DatafeedTimingStats(JOB_ID, 5, 1120.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 1000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 1120.0, 10.0)),
             is(true));
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 10000.0), new DatafeedTimingStats(JOB_ID, 5, 11000.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 10000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 11000.0, 10.0)),
             is(false));
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 10000.0), new DatafeedTimingStats(JOB_ID, 5, 11200.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 10000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 11200.0, 10.0)),
             is(true));
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 100000.0), new DatafeedTimingStats(JOB_ID, 5, 110000.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 100000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 110000.0, 10.0)),
             is(false));
         assertThat(
             DatafeedTimingStatsReporter.differSignificantly(
-                new DatafeedTimingStats(JOB_ID, 5, 100000.0), new DatafeedTimingStats(JOB_ID, 5, 110001.0)),
+                new DatafeedTimingStats(JOB_ID, 5, 100000.0, 10.0), new DatafeedTimingStats(JOB_ID, 5, 110001.0, 10.0)),
             is(true));
     }
 }

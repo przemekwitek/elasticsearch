@@ -39,14 +39,19 @@ public class TransportPostDataAction extends TransportJobTaskAction<PostDataActi
         TimeRange timeRange = TimeRange.builder().startTime(request.getResetStart()).endTime(request.getResetEnd()).build();
         DataLoadParams params = new DataLoadParams(timeRange, Optional.ofNullable(request.getDataDescription()));
         try (InputStream contentStream = request.getContent().streamInput()) {
-            processManager.processData(task, analysisRegistry, contentStream, request.getXContentType(),
-                    params, (dataCounts, e) -> {
-                if (dataCounts != null) {
-                    listener.onResponse(new PostDataAction.Response(dataCounts));
-                } else {
-                    listener.onFailure(e);
-                }
-            });
+            processManager.processData(
+                task,
+                analysisRegistry,
+                contentStream,
+                request.getXContentType(),
+                params,
+                (dataCounts, e) -> {
+                    if (dataCounts != null) {
+                        listener.onResponse(new PostDataAction.Response(dataCounts));
+                    } else {
+                        listener.onFailure(e);
+                    }
+                });
         } catch (Exception e) {
             listener.onFailure(e);
         }

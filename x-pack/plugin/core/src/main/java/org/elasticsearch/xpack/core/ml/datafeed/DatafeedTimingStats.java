@@ -27,6 +27,7 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
     public static final ParseField JOB_ID = new ParseField("job_id");
     public static final ParseField SEARCH_COUNT = new ParseField("search_count");
     public static final ParseField TOTAL_SEARCH_TIME_MS = new ParseField("total_search_time_ms");
+    public static final ParseField AVG_BUCKET_SEARCH_TIME_MS = new ParseField("average_bucket_search_time_ms");
 
     public static final ParseField TYPE = new ParseField("datafeed_timing_stats");
 
@@ -41,11 +42,14 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
                     String jobId = (String) args[0];
                     Long searchCount = (Long) args[1];
                     Double totalSearchTimeMs = (Double) args[2];
-                    return new DatafeedTimingStats(jobId, getOrDefault(searchCount, 0L), getOrDefault(totalSearchTimeMs, 0.0));
+                    Double avgBucketSearchTimeMs = (Double) args[3];
+                    return new DatafeedTimingStats(
+                        jobId, getOrDefault(searchCount, 0L), getOrDefault(totalSearchTimeMs, 0.0), avgBucketSearchTimeMs);
                 });
         parser.declareString(constructorArg(), JOB_ID);
         parser.declareLong(optionalConstructorArg(), SEARCH_COUNT);
         parser.declareDouble(optionalConstructorArg(), TOTAL_SEARCH_TIME_MS);
+        parser.declareDouble(optionalConstructorArg(), AVG_BUCKET_SEARCH_TIME_MS);
         return parser;
     }
 
@@ -56,25 +60,28 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
     private final String jobId;
     private long searchCount;
     private double totalSearchTimeMs;
+    private Double avgBucketSearchTimeMs;
 
-    public DatafeedTimingStats(String jobId, long searchCount, double totalSearchTimeMs) {
+    public DatafeedTimingStats(String jobId, long searchCount, double totalSearchTimeMs, @Nullable Double avgBucketSearchTimeMs) {
         this.jobId = Objects.requireNonNull(jobId);
         this.searchCount = searchCount;
         this.totalSearchTimeMs = totalSearchTimeMs;
+        this.avgBucketSearchTimeMs = avgBucketSearchTimeMs;
     }
 
     public DatafeedTimingStats(String jobId) {
-        this(jobId, 0, 0);
+        this(jobId, 0, 0, null);
     }
 
     public DatafeedTimingStats(StreamInput in) throws IOException {
         jobId = in.readString();
         searchCount = in.readLong();
         totalSearchTimeMs = in.readDouble();
+        avgBucketSearchTimeMs = in.readOptionalDouble();
     }
 
     public DatafeedTimingStats(DatafeedTimingStats other) {
-        this(other.jobId, other.searchCount, other.totalSearchTimeMs);
+        this(other.jobId, other.searchCount, other.totalSearchTimeMs, other.avgBucketSearchTimeMs);
     }
 
     public String getJobId() {
@@ -89,9 +96,14 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
         return totalSearchTimeMs;
     }
 
+    public Double getAvgBucketSearchTimeMs() {
+        return avgBucketSearchTimeMs;
+    }
+
     public void incrementTotalSearchTimeMs(double searchTimeMs) {
         this.searchCount++;
         this.totalSearchTimeMs += searchTimeMs;
+        // TODO
     }
 
     @Override
@@ -99,6 +111,7 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
         out.writeString(jobId);
         out.writeLong(searchCount);
         out.writeDouble(totalSearchTimeMs);
+        out.writeOptionalDouble(avgBucketSearchTimeMs);
     }
 
     @Override
@@ -107,6 +120,9 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
         builder.field(JOB_ID.getPreferredName(), jobId);
         builder.field(SEARCH_COUNT.getPreferredName(), searchCount);
         builder.field(TOTAL_SEARCH_TIME_MS.getPreferredName(), totalSearchTimeMs);
+        if (avgBucketSearchTimeMs != null) {
+            builder.field(AVG_BUCKET_SEARCH_TIME_MS.getPreferredName(), avgBucketSearchTimeMs);
+        }
         builder.endObject();
         return builder;
     }
@@ -123,12 +139,13 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
         DatafeedTimingStats other = (DatafeedTimingStats) obj;
         return Objects.equals(this.jobId, other.jobId)
             && this.searchCount == other.searchCount
-            && this.totalSearchTimeMs == other.totalSearchTimeMs;
+            && this.totalSearchTimeMs == other.totalSearchTimeMs
+            && Objects.equals(this.avgBucketSearchTimeMs, other.avgBucketSearchTimeMs);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(jobId, searchCount, totalSearchTimeMs);
+        return Objects.hash(jobId, searchCount, totalSearchTimeMs, avgBucketSearchTimeMs);
     }
 
     @Override

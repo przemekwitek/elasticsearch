@@ -73,6 +73,7 @@ public class DatafeedJobTests extends ESTestCase {
     private Auditor auditor;
     private DataExtractorFactory dataExtractorFactory;
     private DataExtractor dataExtractor;
+    private DatafeedTimingStatsReporter timingStatsReporter;
     private Client client;
     private DelayedDataDetector delayedDataDetector;
     private DataDescription.Builder dataDescription;
@@ -93,6 +94,7 @@ public class DatafeedJobTests extends ESTestCase {
         dataExtractorFactory = mock(DataExtractorFactory.class);
         dataExtractor = mock(DataExtractor.class);
         when(dataExtractorFactory.newExtractor(anyLong(), anyLong())).thenReturn(dataExtractor);
+        timingStatsReporter = mock(DatafeedTimingStatsReporter.class);
         client = mock(Client.class);
         ThreadPool threadPool = mock(ThreadPool.class);
         when(client.threadPool()).thenReturn(threadPool);
@@ -455,7 +457,7 @@ public class DatafeedJobTests extends ESTestCase {
     private DatafeedJob createDatafeedJob(long frequencyMs, long queryDelayMs, long latestFinalBucketEndTimeMs,
                                             long latestRecordTimeMs) {
         Supplier<Long> currentTimeSupplier = () -> currentTime;
-        return new DatafeedJob(jobId, dataDescription.build(), frequencyMs, queryDelayMs, dataExtractorFactory, client, auditor,
-                currentTimeSupplier, delayedDataDetector, latestFinalBucketEndTimeMs, latestRecordTimeMs);
+        return new DatafeedJob(jobId, dataDescription.build(), frequencyMs, queryDelayMs, dataExtractorFactory, timingStatsReporter,
+                client, auditor, currentTimeSupplier, delayedDataDetector, latestFinalBucketEndTimeMs, latestRecordTimeMs);
     }
 }

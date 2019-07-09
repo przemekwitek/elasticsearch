@@ -15,13 +15,14 @@ import org.elasticsearch.test.AbstractSerializingTestCase;
 import java.io.IOException;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 
 public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<DatafeedTimingStats> {
 
     private static final String JOB_ID = "my-job-id";
 
     public static DatafeedTimingStats createRandom() {
-        return new DatafeedTimingStats(randomAlphaOfLength(10), randomLong(), randomDouble());
+        return new DatafeedTimingStats(randomAlphaOfLength(10), randomLong(), randomDouble(), randomBoolean() ? null : randomDouble());
     }
 
     @Override
@@ -44,10 +45,12 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
         String jobId = instance.getJobId();
         long searchCount = instance.getSearchCount();
         double totalSearchTimeMs = instance.getTotalSearchTimeMs();
+        Double avgBucketSearchTimeMs = instance.getAvgBucketSearchTimeMs() == null ? 0 : instance.getAvgBucketSearchTimeMs();
         return new DatafeedTimingStats(
             jobId + randomAlphaOfLength(5),
             searchCount + 1,
-            totalSearchTimeMs + randomDoubleBetween(1.0, 100.0, true));
+            totalSearchTimeMs + randomDoubleBetween(1.0, 100.0, true),
+            avgBucketSearchTimeMs + randomDoubleBetween(1.0, 100.0, true));
     }
 
     public void testParse_OptionalFieldsAbsent() throws IOException {
@@ -59,13 +62,14 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
             assertThat(stats.getJobId(), equalTo(JOB_ID));
             assertThat(stats.getSearchCount(), equalTo(0L));
             assertThat(stats.getTotalSearchTimeMs(), equalTo(0.0));
+            assertThat(stats.getAvgBucketSearchTimeMs(), nullValue());
         }
     }
 
     public void testEquals() {
-        DatafeedTimingStats stats1 = new DatafeedTimingStats(JOB_ID, 5, 100.0);
-        DatafeedTimingStats stats2 = new DatafeedTimingStats(JOB_ID, 5, 100.0);
-        DatafeedTimingStats stats3 = new DatafeedTimingStats(JOB_ID, 5, 200.0);
+        DatafeedTimingStats stats1 = new DatafeedTimingStats(JOB_ID, 5, 100.0, 20.0);
+        DatafeedTimingStats stats2 = new DatafeedTimingStats(JOB_ID, 5, 100.0, 20.0);
+        DatafeedTimingStats stats3 = new DatafeedTimingStats(JOB_ID, 5, 200.0, 20.0);
 
         assertTrue(stats1.equals(stats1));
         assertTrue(stats1.equals(stats2));
@@ -73,9 +77,9 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
     }
 
     public void testHashCode() {
-        DatafeedTimingStats stats1 = new DatafeedTimingStats(JOB_ID, 5, 100.0);
-        DatafeedTimingStats stats2 = new DatafeedTimingStats(JOB_ID, 5, 100.0);
-        DatafeedTimingStats stats3 = new DatafeedTimingStats(JOB_ID, 5, 200.0);
+        DatafeedTimingStats stats1 = new DatafeedTimingStats(JOB_ID, 5, 100.0, 20.0);
+        DatafeedTimingStats stats2 = new DatafeedTimingStats(JOB_ID, 5, 100.0, 20.0);
+        DatafeedTimingStats stats3 = new DatafeedTimingStats(JOB_ID, 5, 200.0, 20.0);
 
         assertEquals(stats1.hashCode(), stats1.hashCode());
         assertEquals(stats1.hashCode(), stats2.hashCode());
@@ -83,32 +87,36 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
     }
 
     public void testConstructorsAndGetters() {
-        DatafeedTimingStats stats = new DatafeedTimingStats(JOB_ID, 5, 123.456);
+        DatafeedTimingStats stats = new DatafeedTimingStats(JOB_ID, 5, 123.456, 78.9);
         assertThat(stats.getJobId(), equalTo(JOB_ID));
         assertThat(stats.getSearchCount(), equalTo(5L));
         assertThat(stats.getTotalSearchTimeMs(), equalTo(123.456));
+        assertThat(stats.getAvgBucketSearchTimeMs(), equalTo(78.9));
 
         stats = new DatafeedTimingStats(JOB_ID);
         assertThat(stats.getJobId(), equalTo(JOB_ID));
         assertThat(stats.getSearchCount(), equalTo(0L));
         assertThat(stats.getTotalSearchTimeMs(), equalTo(0.0));
+        assertThat(stats.getAvgBucketSearchTimeMs(), nullValue());
     }
 
     public void testCopyConstructor() {
-        DatafeedTimingStats stats1 = new DatafeedTimingStats(JOB_ID, 5, 123.456);
+        DatafeedTimingStats stats1 = new DatafeedTimingStats(JOB_ID, 5, 123.456, 78.9);
         DatafeedTimingStats stats2 = new DatafeedTimingStats(stats1);
 
         assertThat(stats2.getJobId(), equalTo(JOB_ID));
         assertThat(stats2.getSearchCount(), equalTo(5L));
         assertThat(stats2.getTotalSearchTimeMs(), equalTo(123.456));
+        assertThat(stats2.getAvgBucketSearchTimeMs(), equalTo(78.9));
     }
 
     public void testIncrementTotalSearchTimeMs() {
-        DatafeedTimingStats stats = new DatafeedTimingStats(JOB_ID, 5, 100.0);
+        DatafeedTimingStats stats = new DatafeedTimingStats(JOB_ID, 5, 100.0, 20.0);
         stats.incrementTotalSearchTimeMs(200.0);
         assertThat(stats.getJobId(), equalTo(JOB_ID));
         assertThat(stats.getSearchCount(), equalTo(6L));
         assertThat(stats.getTotalSearchTimeMs(), equalTo(300.0));
+        assertThat(stats.getAvgBucketSearchTimeMs(), equalTo(20.0));  // TODO
     }
 
     public void testDocumentId() {
