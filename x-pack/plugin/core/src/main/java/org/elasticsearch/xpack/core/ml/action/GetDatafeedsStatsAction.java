@@ -27,7 +27,6 @@ import org.elasticsearch.xpack.core.ml.utils.ExceptionsHelper;
 import org.elasticsearch.xpack.core.ml.utils.ToXContentParams;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -198,7 +197,10 @@ public class GetDatafeedsStatsAction extends ActionType<GetDatafeedsStatsAction.
                     builder.field(
                         TIMING_STATS,
                         timingStats,
-                        new MapParams(Collections.singletonMap(ToXContentParams.INCLUDE_CALCULATED_FIELDS, "true")));
+                        new MapParams(
+                            Map.of(
+                                ToXContentParams.INCLUDE_CALCULATED_FIELDS, "true",
+                                ToXContentParams.FOR_INTERNAL_STORAGE, "false")));
                 }
                 builder.endObject();
                 return builder;

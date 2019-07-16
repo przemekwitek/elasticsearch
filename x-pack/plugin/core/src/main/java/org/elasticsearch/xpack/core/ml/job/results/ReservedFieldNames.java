@@ -185,10 +185,12 @@ public final class ReservedFieldNames {
             TimingStats.MAX_BUCKET_PROCESSING_TIME_MS.getPreferredName(),
             TimingStats.AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(),
             TimingStats.EXPONENTIAL_AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(),
+            TimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(),
 
             DatafeedTimingStats.SEARCH_COUNT.getPreferredName(),
             DatafeedTimingStats.BUCKET_COUNT.getPreferredName(),
             DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(),
+            DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(),
 
             GetResult._ID,
             GetResult._INDEX,
