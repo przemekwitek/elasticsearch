@@ -29,6 +29,7 @@ import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSizeSta
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshot;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshotField;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
+import org.elasticsearch.xpack.core.ml.utils.ExponentialAverageCalculationContext;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -191,6 +192,10 @@ public final class ReservedFieldNames {
             DatafeedTimingStats.BUCKET_COUNT.getPreferredName(),
             DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(),
             DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(),
+
+            ExponentialAverageCalculationContext.INCREMENTAL_TIME_METRIC_MS.getPreferredName(),
+            ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(),
+            ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(),
 
             GetResult._ID,
             GetResult._INDEX,

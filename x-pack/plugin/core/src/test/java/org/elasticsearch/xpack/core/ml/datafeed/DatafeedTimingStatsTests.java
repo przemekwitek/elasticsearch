@@ -74,7 +74,7 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
             assertThat(stats.getBucketCount(), equalTo(0L));
             assertThat(stats.getTotalSearchTimeMs(), equalTo(0.0));
             assertThat(stats.getAvgSearchTimePerBucketMs(), nullValue());
-            assertThat(stats.getExponentialAvgCalculationContext(), nullValue());
+            assertThat(stats.getExponentialAvgCalculationContext(), equalTo(new ExponentialAverageCalculationContext()));
         }
     }
 
