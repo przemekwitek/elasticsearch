@@ -135,10 +135,10 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
         assertThat(stats.getExponentialAvgCalculationContext(), equalTo(new ExponentialAverageCalculationContext(250.0, null, null)));
     }
 
-    public void testSetBucketCount() {
+    public void testIncrementBucketCount() {
         DatafeedTimingStats stats =
             new DatafeedTimingStats(JOB_ID, 5, 10, 100.0, new ExponentialAverageCalculationContext(50.0, null, null));
-        stats.setBucketCount(20);
+        stats.incrementBucketCount(10);
         assertThat(stats.getJobId(), equalTo(JOB_ID));
         assertThat(stats.getSearchCount(), equalTo(5L));
         assertThat(stats.getBucketCount(), equalTo(20L));
@@ -154,12 +154,12 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
         assertThat(stats.getAvgSearchTimePerBucketMs(), nullValue());
 
         stats.incrementSearchTimeMs(100.0);
-        stats.setBucketCount(10);
+        stats.incrementBucketCount(10);
         assertThat(stats.getBucketCount(), equalTo(10L));
         assertThat(stats.getTotalSearchTimeMs(), equalTo(100.0));
         assertThat(stats.getAvgSearchTimePerBucketMs(), equalTo(10.0));
 
-        stats.setBucketCount(20);
+        stats.incrementBucketCount(10);
         assertThat(stats.getBucketCount(), equalTo(20L));
         assertThat(stats.getTotalSearchTimeMs(), equalTo(100.0));
         assertThat(stats.getAvgSearchTimePerBucketMs(), equalTo(5.0));
@@ -169,7 +169,7 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
         assertThat(stats.getTotalSearchTimeMs(), equalTo(300.0));
         assertThat(stats.getAvgSearchTimePerBucketMs(), equalTo(15.0));
 
-        stats.setBucketCount(25);
+        stats.incrementBucketCount(5);
         assertThat(stats.getBucketCount(), equalTo(25L));
         assertThat(stats.getTotalSearchTimeMs(), equalTo(300.0));
         assertThat(stats.getAvgSearchTimePerBucketMs(), equalTo(12.0));
