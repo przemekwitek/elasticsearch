@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 public class TimingStatsReporterTests extends ESTestCase {
 
     private static final String JOB_ID = "my-job-id";
-    private static final long BUCKET_SPAN = 10;
+    private static final long BUCKET_SPAN_SEC = 60;
     private static Instant TIMESTAMP = Instant.ofEpochMilli(1000000000);
 
     private JobResultsPersister.Builder bulkResultsPersister;
@@ -160,7 +160,7 @@ public class TimingStatsReporterTests extends ESTestCase {
             @Nullable Double exponentialAvgBucketProcessingTimeMs,
             double incrementalBucketProcessingTimeMs) {
         ExponentialAverageCalculationContext context =
-            new ExponentialAverageCalculationContext(incrementalBucketProcessingTimeMs, TIMESTAMP, null);
+            new ExponentialAverageCalculationContext(incrementalBucketProcessingTimeMs, TIMESTAMP.plusSeconds(BUCKET_SPAN_SEC), null);
         return new TimingStats(
             jobId,
             bucketCount,
@@ -172,7 +172,7 @@ public class TimingStatsReporterTests extends ESTestCase {
     }
 
     private static Bucket createBucket(long processingTimeMs) {
-        Bucket bucket = new Bucket(JOB_ID, Date.from(TIMESTAMP), BUCKET_SPAN);
+        Bucket bucket = new Bucket(JOB_ID, Date.from(TIMESTAMP), BUCKET_SPAN_SEC);
         bucket.setProcessingTimeMs(processingTimeMs);
         return bucket;
     }

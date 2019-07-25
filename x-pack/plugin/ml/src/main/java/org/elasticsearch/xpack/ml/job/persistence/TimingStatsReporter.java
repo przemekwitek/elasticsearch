@@ -38,7 +38,7 @@ public class TimingStatsReporter {
 
     public void reportBucket(Bucket bucket) {
         currentTimingStats.updateStats(bucket.getProcessingTimeMs());
-        currentTimingStats.setLatestRecordTimestamp(bucket.getTimestamp().toInstant());
+        currentTimingStats.setLatestRecordTimestamp(bucket.getTimestamp().toInstant().plusSeconds(bucket.getBucketSpan()));
         if (differSignificantly(currentTimingStats, persistedTimingStats)) {
             flush();
         }
