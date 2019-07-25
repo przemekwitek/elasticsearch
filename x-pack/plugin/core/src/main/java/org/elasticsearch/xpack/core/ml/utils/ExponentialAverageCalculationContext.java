@@ -28,6 +28,26 @@ import static org.elasticsearch.common.xcontent.ConstructingObjectParser.optiona
 
 /**
  * Utility for calculating current value of exponentially-weighted moving average per fixed-sized time window.
+ *
+ * The formula for the current value of the exponentially-weighted moving average is:
+ *
+ *   currentExponentialAverageMs = alpha * previousExponentialAverageMs + (1 - alpha) * incrementalMetricValueMs
+ *
+ * where alpha depends on what fraction of the current time window we've already seen:
+ *
+ *   alpha = e^(-time_elapsed_since_window_start/window_size)
+ *   time_elapsed_since_window_start = latestTimestamp - window_start
+ *
+ * The class holds 3 values based on which it performs the calculation:
+ *  - incrementalMetricValueMs - accumulated value of the metric in the current time window
+ *  - latestTimestamp - timestamp updated as the time passes through the current time window
+ *  - previousExponentialAverageMs - exponential average for previous time windows
+ *
+ * incrementalMetricValueMs should be updated using {@link #increment}.
+ * latestTimestamp should be updated using {@link #setLatestTimestamp}.
+ * Because it can happen that the timestamp is not available while incrementing the metric value, it is the responsibility of the user
+ * of this class to always call {@link #setLatestTimestamp} *after* all the relevant (i.e. referring to the points in time before the
+ * latest timestamp mentioned) {@link #increment} calls are made.
  */
 public class ExponentialAverageCalculationContext implements Writeable, ToXContentObject {
 
@@ -40,11 +60,11 @@ public class ExponentialAverageCalculationContext implements Writeable, ToXConte
             "exponential_average_calculation_context",
             true,
             args -> {
-                Double incrementalTimeMetricValueMs = (Double) args[0];
+                Double incrementalMetricValueMs = (Double) args[0];
                 Instant latestTimestamp = (Instant) args[1];
                 Double previousExponentialAverageMs = (Double) args[2];
                 return new ExponentialAverageCalculationContext(
-                    getOrDefault(incrementalTimeMetricValueMs, 0.0),
+                    getOrDefault(incrementalMetricValueMs, 0.0),
                     latestTimestamp,
                     previousExponentialAverageMs);
             });
@@ -62,7 +82,7 @@ public class ExponentialAverageCalculationContext implements Writeable, ToXConte
     private static final TemporalUnit WINDOW_UNIT = ChronoUnit.HOURS;
     private static final Duration WINDOW_SIZE = WINDOW_UNIT.getDuration();
 
-    private double incrementalTimeMetricValueMs;
+    private double incrementalMetricValueMs;
     private Instant latestTimestamp;
     private Double previousExponentialAverageMs;
 
@@ -71,57 +91,67 @@ public class ExponentialAverageCalculationContext implements Writeable, ToXConte
     }
 
     public ExponentialAverageCalculationContext(
-            double incrementalTimeMetricValueMs,
+            double incrementalMetricValueMs,
             @Nullable Instant latestTimestamp,
             @Nullable Double previousExponentialAverageMs) {
-        this.incrementalTimeMetricValueMs = incrementalTimeMetricValueMs;
+        this.incrementalMetricValueMs = incrementalMetricValueMs;
         this.latestTimestamp = latestTimestamp != null ? Instant.ofEpochMilli(latestTimestamp.toEpochMilli()) : null;
         this.previousExponentialAverageMs = previousExponentialAverageMs;
     }
 
     public ExponentialAverageCalculationContext(ExponentialAverageCalculationContext lhs) {
-        this(lhs.incrementalTimeMetricValueMs, lhs.latestTimestamp, lhs.previousExponentialAverageMs);
+        this(lhs.incrementalMetricValueMs, lhs.latestTimestamp, lhs.previousExponentialAverageMs);
     }
 
     public ExponentialAverageCalculationContext(StreamInput in) throws IOException {
-        this.incrementalTimeMetricValueMs = in.readDouble();
+        this.incrementalMetricValueMs = in.readDouble();
         this.latestTimestamp = in.readOptionalInstant();
         this.previousExponentialAverageMs = in.readOptionalDouble();
     }
 
-    double getIncrementalTimeMetricValueMs() {
-        return incrementalTimeMetricValueMs;
+    // Visible for testing
+    public double getIncrementalMetricValueMs() {
+        return incrementalMetricValueMs;
     }
 
-    Instant getLatestTimestamp() {
+    // Visible for testing
+    public Instant getLatestTimestamp() {
         return latestTimestamp;
     }
 
-    Double getPreviousExponentialAverageMs() {
+    // Visible for testing
+    public Double getPreviousExponentialAverageMs() {
         return previousExponentialAverageMs;
     }
 
     public Double getCurrentExponentialAverageMs() {
-        if (previousExponentialAverageMs == null || latestTimestamp == null) return incrementalTimeMetricValueMs;
+        if (previousExponentialAverageMs == null || latestTimestamp == null) return incrementalMetricValueMs;
         Instant currentWindowStartTimestamp = latestTimestamp.truncatedTo(WINDOW_UNIT);
         double alpha = Math.exp(
             - (double) Duration.between(currentWindowStartTimestamp, latestTimestamp).toMillis() / WINDOW_SIZE.toMillis());
-        return alpha * previousExponentialAverageMs + (1 - alpha) * incrementalTimeMetricValueMs;
+        return alpha * previousExponentialAverageMs + (1 - alpha) * incrementalMetricValueMs;
     }
 
+    /**
+     * Increments the current accumulated metric value by the given delta.
+     */
     public void increment(double metricValueDeltaMs) {
-        incrementalTimeMetricValueMs += metricValueDeltaMs;
+        incrementalMetricValueMs += metricValueDeltaMs;
     }
 
+    /**
+     * Sets the latest timestamp that serves as an indication of the current point in time.
+     * Before calling this method make sure all the associated calls to {@link #increment} were already made.
+     */
     public void setLatestTimestamp(Instant newLatestTimestamp) {
         Objects.requireNonNull(newLatestTimestamp);
         if (this.latestTimestamp != null) {
             Instant nextWindowStartTimestamp = this.latestTimestamp.truncatedTo(WINDOW_UNIT).plus(WINDOW_SIZE);
             if (newLatestTimestamp.compareTo(nextWindowStartTimestamp) >= 0) {
                 // When we cross the boundary between windows, we update the exponential average with metric values accumulated so far in
-                // incrementalTimeMetricValueMs variable.
+                // incrementalMetricValueMs variable.
                 this.previousExponentialAverageMs = getCurrentExponentialAverageMs();
-                this.incrementalTimeMetricValueMs = 0.0;
+                this.incrementalMetricValueMs = 0.0;
             }
         } else {
             // This is the first time {@link #setLatestRecordTimestamp} is called on this object.
@@ -133,7 +163,7 @@ public class ExponentialAverageCalculationContext implements Writeable, ToXConte
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeDouble(incrementalTimeMetricValueMs);
+        out.writeDouble(incrementalMetricValueMs);
         out.writeOptionalInstant(latestTimestamp);
         out.writeOptionalDouble(previousExponentialAverageMs);
     }
@@ -141,7 +171,7 @@ public class ExponentialAverageCalculationContext implements Writeable, ToXConte
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field(INCREMENTAL_TIME_METRIC_MS.getPreferredName(), incrementalTimeMetricValueMs);
+        builder.field(INCREMENTAL_TIME_METRIC_MS.getPreferredName(), incrementalMetricValueMs);
         if (latestTimestamp != null) {
             builder.timeField(
                 LATEST_TIMESTAMP.getPreferredName(),
@@ -160,14 +190,14 @@ public class ExponentialAverageCalculationContext implements Writeable, ToXConte
         if (o == this) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ExponentialAverageCalculationContext that = (ExponentialAverageCalculationContext) o;
-        return this.incrementalTimeMetricValueMs == that.incrementalTimeMetricValueMs
+        return this.incrementalMetricValueMs == that.incrementalMetricValueMs
             && Objects.equals(this.latestTimestamp, that.latestTimestamp)
             && Objects.equals(this.previousExponentialAverageMs, that.previousExponentialAverageMs);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(incrementalTimeMetricValueMs, latestTimestamp, previousExponentialAverageMs);
+        return Objects.hash(incrementalMetricValueMs, latestTimestamp, previousExponentialAverageMs);
     }
 
     @Override

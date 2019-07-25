@@ -63,12 +63,13 @@ public class DatafeedTimingStatsTests extends AbstractSerializingTestCase<Datafe
         long searchCount = instance.getSearchCount();
         long bucketCount = instance.getBucketCount();
         double totalSearchTimeMs = instance.getTotalSearchTimeMs();
+        double incrementalSearchTimeMs = instance.getExponentialAvgCalculationContext().getIncrementalMetricValueMs();
         return new DatafeedTimingStats(
             jobId + randomAlphaOfLength(5),
             searchCount + 2,
             bucketCount + 1,
             totalSearchTimeMs + randomDoubleBetween(1.0, 100.0, true),
-            null);
+            new ExponentialAverageCalculationContext(incrementalSearchTimeMs + randomDoubleBetween(1.0, 100.0, true), null, null));
     }
 
     public void testParse_OptionalFieldsAbsent() throws IOException {

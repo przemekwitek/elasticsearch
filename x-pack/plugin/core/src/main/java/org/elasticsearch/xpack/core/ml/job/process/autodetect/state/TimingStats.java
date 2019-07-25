@@ -97,13 +97,13 @@ public class TimingStats implements ToXContentObject, Writeable {
             @Nullable Double avgBucketProcessingTimeMs,
             @Nullable Double exponentialAvgBucketProcessingTimeMs,
             ExponentialAverageCalculationContext exponentialAvgCalculationContext) {
-        this.jobId = jobId;
+        this.jobId = Objects.requireNonNull(jobId);
         this.bucketCount = bucketCount;
         this.minBucketProcessingTimeMs = minBucketProcessingTimeMs;
         this.maxBucketProcessingTimeMs = maxBucketProcessingTimeMs;
         this.avgBucketProcessingTimeMs = avgBucketProcessingTimeMs;
         this.exponentialAvgBucketProcessingTimeMs = exponentialAvgBucketProcessingTimeMs;
-        this.exponentialAvgCalculationContext = exponentialAvgCalculationContext;
+        this.exponentialAvgCalculationContext = Objects.requireNonNull(exponentialAvgCalculationContext);
     }
 
     public TimingStats(String jobId) {
@@ -164,6 +164,10 @@ public class TimingStats implements ToXContentObject, Writeable {
 
     public Double getExponentialAvgBucketProcessingTimeMs() {
         return exponentialAvgBucketProcessingTimeMs;
+    }
+
+    public Double getExponentialAvgBucketProcessingTimePerHourMs() {
+        return exponentialAvgCalculationContext.getCurrentExponentialAverageMs();
     }
 
     // Visible for testing
@@ -248,7 +252,7 @@ public class TimingStats implements ToXContentObject, Writeable {
             builder.field(EXPONENTIAL_AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), exponentialAvgBucketProcessingTimeMs);
         }
         if (params.paramAsBoolean(ToXContentParams.INCLUDE_CALCULATED_FIELDS, false)) {
-            Double expAvgBucketProcessingTimePerHourMs = exponentialAvgCalculationContext.getCurrentExponentialAverageMs();
+            Double expAvgBucketProcessingTimePerHourMs = getExponentialAvgBucketProcessingTimePerHourMs();
             if (expAvgBucketProcessingTimePerHourMs != null) {
                 builder.field(EXPONENTIAL_AVG_BUCKET_PROCESSING_TIME_PER_HOUR_MS.getPreferredName(), expAvgBucketProcessingTimePerHourMs);
             }

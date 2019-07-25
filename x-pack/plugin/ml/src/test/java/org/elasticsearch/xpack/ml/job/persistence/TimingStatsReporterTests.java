@@ -13,6 +13,7 @@ import org.elasticsearch.xpack.core.ml.utils.ExponentialAverageCalculationContex
 import org.junit.Before;
 import org.mockito.InOrder;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 
@@ -26,8 +27,8 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 public class TimingStatsReporterTests extends ESTestCase {
 
     private static final String JOB_ID = "my-job-id";
-    private static final long BUCKET_SPAN_SEC = 60;
-    private static Instant TIMESTAMP = Instant.ofEpochMilli(1000000000);
+    private static final Instant TIMESTAMP = Instant.ofEpochMilli(1000000000);
+    private static final Duration BUCKET_SPAN = Duration.ofMinutes(1);
 
     private JobResultsPersister.Builder bulkResultsPersister;
 
@@ -160,7 +161,7 @@ public class TimingStatsReporterTests extends ESTestCase {
             @Nullable Double exponentialAvgBucketProcessingTimeMs,
             double incrementalBucketProcessingTimeMs) {
         ExponentialAverageCalculationContext context =
-            new ExponentialAverageCalculationContext(incrementalBucketProcessingTimeMs, TIMESTAMP.plusSeconds(BUCKET_SPAN_SEC), null);
+            new ExponentialAverageCalculationContext(incrementalBucketProcessingTimeMs, TIMESTAMP.plus(BUCKET_SPAN), null);
         return new TimingStats(
             jobId,
             bucketCount,
@@ -172,7 +173,7 @@ public class TimingStatsReporterTests extends ESTestCase {
     }
 
     private static Bucket createBucket(long processingTimeMs) {
-        Bucket bucket = new Bucket(JOB_ID, Date.from(TIMESTAMP), BUCKET_SPAN_SEC);
+        Bucket bucket = new Bucket(JOB_ID, Date.from(TIMESTAMP), BUCKET_SPAN.getSeconds());
         bucket.setProcessingTimeMs(processingTimeMs);
         return bucket;
     }

@@ -86,7 +86,7 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
         this.searchCount = searchCount;
         this.bucketCount = bucketCount;
         this.totalSearchTimeMs = totalSearchTimeMs;
-        this.exponentialAvgCalculationContext = exponentialAvgCalculationContext;
+        this.exponentialAvgCalculationContext = Objects.requireNonNull(exponentialAvgCalculationContext);
     }
 
     public DatafeedTimingStats(String jobId) {
@@ -131,13 +131,13 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
         return totalSearchTimeMs / bucketCount;
     }
 
+    public Double getExponentialAvgSearchTimePerHourMs() {
+        return exponentialAvgCalculationContext.getCurrentExponentialAverageMs();
+    }
+
     // Visible for testing
     ExponentialAverageCalculationContext getExponentialAvgCalculationContext() {
         return exponentialAvgCalculationContext;
-    }
-
-    public Double getExponentialAvgSearchTimePerHourMs() {
-        return exponentialAvgCalculationContext.getCurrentExponentialAverageMs();
     }
 
     public void incrementSearchTimeMs(double searchTimeMs) {
@@ -178,7 +178,7 @@ public class DatafeedTimingStats implements ToXContentObject, Writeable {
             if (avgSearchTimePerBucketMs != null) {
                 builder.field(AVG_SEARCH_TIME_PER_BUCKET_MS.getPreferredName(), avgSearchTimePerBucketMs);
             }
-            Double expAvgSearchTimePerHourMs = exponentialAvgCalculationContext.getCurrentExponentialAverageMs();
+            Double expAvgSearchTimePerHourMs = getExponentialAvgSearchTimePerHourMs();
             if (expAvgSearchTimePerHourMs != null) {
                 builder.field(EXPONENTIAL_AVG_SEARCH_TIME_PER_HOUR_MS.getPreferredName(), expAvgSearchTimePerHourMs);
             }

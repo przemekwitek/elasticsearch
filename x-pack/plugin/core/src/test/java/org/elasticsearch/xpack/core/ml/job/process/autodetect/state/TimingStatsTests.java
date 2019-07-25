@@ -105,19 +105,23 @@ public class TimingStatsTests extends AbstractSerializingTestCase<TimingStats> {
         TimingStats stats = new TimingStats(JOB_ID);
 
         stats.updateStats(3);
-        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 1, 3.0, 3.0, 3.0, 3.0, null), 1e-9));
+        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 1, 3.0, 3.0, 3.0, 3.0, createContext(3.0)), 1e-9));
 
         stats.updateStats(2);
-        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 2, 2.0, 3.0, 2.5, 2.99, null), 1e-9));
+        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 2, 2.0, 3.0, 2.5, 2.99, createContext(5.0)), 1e-9));
 
         stats.updateStats(4);
-        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 3, 2.0, 4.0, 3.0, 3.0001, null), 1e-9));
+        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 3, 2.0, 4.0, 3.0, 3.0001, createContext(9.0)), 1e-9));
 
         stats.updateStats(1);
-        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 4, 1.0, 4.0, 2.5, 2.980099, null), 1e-9));
+        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 4, 1.0, 4.0, 2.5, 2.980099, createContext(10.0)), 1e-9));
 
         stats.updateStats(5);
-        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 5, 1.0, 5.0, 3.0, 3.00029801, null), 1e-9));
+        assertThat(stats, areCloseTo(new TimingStats(JOB_ID, 5, 1.0, 5.0, 3.0, 3.00029801, createContext(15.0)), 1e-9));
+    }
+
+    private static ExponentialAverageCalculationContext createContext(double incrementalSearchTimeMs) {
+        return new ExponentialAverageCalculationContext(incrementalSearchTimeMs, null, null);
     }
 
     public void testTotalBucketProcessingTimeIsCalculatedProperlyAfterUpdates() {
@@ -164,7 +168,9 @@ public class TimingStatsTests extends AbstractSerializingTestCase<TimingStats> {
                     && closeTo(operand.getMaxBucketProcessingTimeMs(), error).matches(item.getMaxBucketProcessingTimeMs())
                     && closeTo(operand.getAvgBucketProcessingTimeMs(), error).matches(item.getAvgBucketProcessingTimeMs())
                     && closeTo(operand.getExponentialAvgBucketProcessingTimeMs(), error)
-                        .matches(item.getExponentialAvgBucketProcessingTimeMs());
+                        .matches(item.getExponentialAvgBucketProcessingTimeMs())
+                    && closeTo(operand.getExponentialAvgBucketProcessingTimePerHourMs(), error)
+                        .matches(item.getExponentialAvgBucketProcessingTimePerHourMs());
             }
         };
     }
