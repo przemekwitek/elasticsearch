@@ -6,14 +6,17 @@
 package org.elasticsearch.xpack.core.ml.job.process.autodetect.state;
 
 import org.elasticsearch.common.io.stream.Writeable;
+import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.test.AbstractSerializingTestCase;
 import org.elasticsearch.xpack.core.ml.utils.ExponentialAverageCalculationContext;
 import org.elasticsearch.xpack.core.ml.utils.ExponentialAverageCalculationContextTests;
+import org.elasticsearch.xpack.core.ml.utils.ToXContentParams;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.Matcher;
 
 import java.time.Instant;
+import java.util.Collections;
 
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.equalTo;
@@ -47,6 +50,11 @@ public class TimingStatsTests extends AbstractSerializingTestCase<TimingStats> {
     @Override
     protected TimingStats doParseInstance(XContentParser parser) {
         return TimingStats.PARSER.apply(parser, null);
+    }
+
+    @Override
+    protected ToXContent.Params getToXContentParams() {
+        return new ToXContent.MapParams(Collections.singletonMap(ToXContentParams.FOR_INTERNAL_STORAGE, "true"));
     }
 
     public void testDefaultConstructor() {
