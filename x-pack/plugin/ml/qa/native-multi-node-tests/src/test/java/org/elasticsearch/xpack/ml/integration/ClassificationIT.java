@@ -518,16 +518,20 @@ public class ClassificationIT extends MlNativeDataFrameAnalyticsIntegTestCase {
         assertThat(analyticsTaskList(), hasSize(1));
         assertThat(analyticsAssignedTaskList(), is(empty()));
 
-        GetDataFrameAnalyticsStatsAction.Response.Stats analyticsStats = getAnalyticsStats(jobId);
-        assertThat(analyticsStats.getAssignmentExplanation(), is(equalTo(AWAITING_UPGRADE.getExplanation())));
-        assertThat(analyticsStats.getNode(), is(nullValue()));
+        assertBusy(() -> {
+            GetDataFrameAnalyticsStatsAction.Response.Stats analyticsStats = getAnalyticsStats(jobId);
+            assertThat(analyticsStats.getAssignmentExplanation(), is(equalTo(AWAITING_UPGRADE.getExplanation())));
+            assertThat(analyticsStats.getNode(), is(nullValue()));
+        });
 
         setUpgradeModeTo(false);
         assertThat(analyticsTaskList(), hasSize(1));
         assertBusy(() -> assertThat(analyticsAssignedTaskList(), hasSize(1)));
 
-        analyticsStats = getAnalyticsStats(jobId);
-        assertThat(analyticsStats.getAssignmentExplanation(), is(not(equalTo(AWAITING_UPGRADE.getExplanation()))));
+        assertBusy(() -> {
+            GetDataFrameAnalyticsStatsAction.Response.Stats analyticsStats = getAnalyticsStats(jobId);
+            assertThat(analyticsStats.getAssignmentExplanation(), is(not(equalTo(AWAITING_UPGRADE.getExplanation()))));
+        });
 
         waitUntilAnalyticsIsStopped(jobId);
     }
