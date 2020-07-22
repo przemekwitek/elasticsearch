@@ -5,7 +5,13 @@
  */
 package org.elasticsearch.xpack.core.ml.action;
 
+import org.elasticsearch.Version;
+import org.elasticsearch.common.io.stream.ByteBufferStreamInput;
+import org.elasticsearch.common.io.stream.BytesStreamOutput;
+import org.elasticsearch.common.io.stream.NamedWriteableAwareStreamInput;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
+import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -17,15 +23,21 @@ import org.elasticsearch.xpack.core.ml.action.EvaluateDataFrameAction.Request;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.Evaluation;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.MlEvaluationNamedXContentProvider;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.classification.ClassificationTests;
+import org.elasticsearch.xpack.core.ml.dataframe.evaluation.outlierdetection.OutlierDetection;
+import org.elasticsearch.xpack.core.ml.dataframe.evaluation.outlierdetection.Precision;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.regression.RegressionTests;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.outlierdetection.OutlierDetectionTests;
 import org.elasticsearch.xpack.core.ml.utils.QueryProvider;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 
 public class EvaluateDataFrameActionRequestTests extends AbstractSerializingTestCase<Request> {
 
@@ -67,6 +79,35 @@ public class EvaluateDataFrameActionRequestTests extends AbstractSerializingTest
             .setIndices(indices)
             .setQueryProvider(queryProvider)
             .setEvaluation(evaluation);
+    }
+
+    public void testDeprecatedName_OutlierDetection() throws IOException {
+        OutlierDetection before = new OutlierDetection("a", "b", Collections.singletonList(new Precision(Collections.singletonList(0.5))));
+        OutlierDetection after = copyInstance(before, getNamedWriteableRegistry(), (out, value) -> {
+            out.writeString(value.getActualField());
+            out.writeString(value.getPredictedField());
+            out.writeVInt(value.getMetrics().size());
+            out.writeString(OutlierDetection.DEPRECATED_NAME + "." + Precision.NAME.getPreferredName());
+            value.getMetrics().get(0).writeTo(out);
+        }, OutlierDetection::new, Version.V_8_0_0);
+
+        assertThat(after, is(equalTo(before)));
+    }
+
+    public void testDeprecatedName_Request() throws IOException {
+        OutlierDetection beforeOD = new OutlierDetection("a", "b", Collections.singletonList(new Precision(Collections.singletonList(0.5))));
+
+        Request before = new Request().setIndices(Collections.singletonList("i")).setEvaluation(beforeOD);
+        Request after = copyInstance(before, getNamedWriteableRegistry(), (out, valu) -> {
+            OutlierDetection value = (OutlierDetection) valu.getEvaluation();
+            out.writeString(value.getActualField());
+            out.writeString(value.getPredictedField());
+            out.writeVInt(value.getMetrics().size());
+            out.writeString(OutlierDetection.DEPRECATED_NAME + "." + Precision.NAME.getPreferredName());
+            value.getMetrics().get(0).writeTo(out);
+        }, Request::new, Version.V_8_0_0);
+
+        assertThat(after, is(equalTo(before)));
     }
 
     @Override

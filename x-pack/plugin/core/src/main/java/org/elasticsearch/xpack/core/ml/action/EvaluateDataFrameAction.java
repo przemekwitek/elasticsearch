@@ -23,6 +23,7 @@ import org.elasticsearch.common.xcontent.XContentParserUtils;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.Evaluation;
 import org.elasticsearch.xpack.core.ml.dataframe.evaluation.EvaluationMetricResult;
+import org.elasticsearch.xpack.core.ml.dataframe.evaluation.outlierdetection.OutlierDetection;
 import org.elasticsearch.xpack.core.ml.job.messages.Messages;
 import org.elasticsearch.xpack.core.ml.utils.ExceptionsHelper;
 import org.elasticsearch.xpack.core.ml.utils.QueryProvider;
@@ -96,7 +97,11 @@ public class EvaluateDataFrameAction extends ActionType<EvaluateDataFrameAction.
                     queryProvider = QueryProvider.fromStream(in);
                 }
             }
-            evaluation = in.readNamedWriteable(Evaluation.class);
+            String evaluationName = in.readString();
+            if (OutlierDetection.DEPRECATED_NAME.getPreferredName().equals(evaluationName)) {
+                evaluationName = OutlierDetection.NAME.getPreferredName();
+            }
+            evaluation = in.readNamedWriteable(Evaluation.class, evaluationName);
         }
 
         public String[] getIndices() {

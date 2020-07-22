@@ -30,7 +30,8 @@ import static org.elasticsearch.xpack.core.ml.dataframe.evaluation.MlEvaluationN
  */
 public class OutlierDetection implements Evaluation {
 
-    public static final ParseField NAME = new ParseField("outlier_detection", "binary_soft_classification");
+    public static final ParseField DEPRECATED_NAME = new ParseField("binary_soft_classification");
+    public static final ParseField NAME = new ParseField("outlier_detection", DEPRECATED_NAME.getPreferredName());
 
     private static final ParseField ACTUAL_FIELD = new ParseField("actual_field");
     private static final ParseField PREDICTED_PROBABILITY_FIELD = new ParseField("predicted_probability_field");
