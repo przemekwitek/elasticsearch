@@ -16,6 +16,7 @@ import org.elasticsearch.common.collect.Iterators;
 import org.elasticsearch.compute.data.Block;
 import org.elasticsearch.compute.data.BlockFactory;
 import org.elasticsearch.compute.data.DocVector;
+import org.elasticsearch.compute.data.BytesRefBlock;
 import org.elasticsearch.compute.data.ElementType;
 import org.elasticsearch.compute.data.Page;
 import org.elasticsearch.compute.operator.BreakingBytesRefBuilder;
@@ -31,6 +32,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 
 /**
  * An operator that sorts "rows" of values by encoding the values to sort on, as bytes (using BytesRef). Each data type is encoded
@@ -250,6 +254,7 @@ public class TopNOperator implements Operator, Accountable {
         int topCount,
         List<ElementType> elementTypes,
         List<TopNEncoder> encoders,
+        Optional<Integer> partitionByChannel,
         List<SortOrder> sortOrders,
         int maxPageSize
     ) implements OperatorFactory {
@@ -269,6 +274,7 @@ public class TopNOperator implements Operator, Accountable {
                 topCount,
                 elementTypes,
                 encoders,
+                partitionByChannel,
                 sortOrders,
                 maxPageSize
             );
@@ -284,17 +290,22 @@ public class TopNOperator implements Operator, Accountable {
                 + encoders
                 + ", sortOrders="
                 + sortOrders
+                + ", partitionByChannel="
+                + partitionByChannel
                 + "]";
         }
     }
 
     private final BlockFactory blockFactory;
     private final CircuitBreaker breaker;
+    private final Map<String, Queue> inputQueues;
 
+    private final int topCount;
     private final int maxPageSize;
 
     private final List<ElementType> elementTypes;
     private final List<TopNEncoder> encoders;
+    private final Optional<Integer> partitionByChannel;
     private final List<SortOrder> sortOrders;
 
     private Queue inputQueue;
@@ -333,16 +344,20 @@ public class TopNOperator implements Operator, Accountable {
         int topCount,
         List<ElementType> elementTypes,
         List<TopNEncoder> encoders,
+        Optional<Integer> partitionByChannel,
         List<SortOrder> sortOrders,
         int maxPageSize
     ) {
         this.blockFactory = blockFactory;
         this.breaker = breaker;
+        this.topCount = topCount;
         this.maxPageSize = maxPageSize;
         this.elementTypes = elementTypes;
         this.encoders = encoders;
+        this.partitionByChannel = partitionByChannel;
         this.sortOrders = sortOrders;
         this.inputQueue = Queue.build(breaker, topCount);
+        this.inputQueues = new TreeMap<>();
     }
 
     static int compareRows(Row r1, Row r2) {
@@ -430,12 +445,29 @@ public class TopNOperator implements Operator, Accountable {
                     inputQueue.updateTop(spare);
                     spare = nextSpare;
                 }
+/*
+                String partition = partitionByChannel.isPresent() ? getCurrentPartitionFieldValue(page, i) : "-default-";
+                Queue inputQueue = inputQueues.get(partition);
+                if (inputQueue == null) {
+                    inputQueues.put(partition, inputQueue = new Queue(topCount));
+                }
+                spare = inputQueue.insertWithOverflow(spare);
+*/
             }
         } finally {
             page.releaseBlocks();
             pagesReceived++;
             rowsReceived += page.getPositionCount();
             receiveNanos += System.nanoTime() - start;
+        }
+    }
+
+    private String getCurrentPartitionFieldValue(Page page, int i) {
+        assert partitionByChannel.isPresent();
+        assert page.getPositionCount() > 0;
+        try (var block = page.getBlock(partitionByChannel.get()).filter(i)) {
+            BytesRef partition = ((BytesRefBlock) block).getBytesRef(i, new BytesRef());
+            return partition.utf8ToString();
         }
     }
 
@@ -454,13 +486,11 @@ public class TopNOperator implements Operator, Accountable {
             spare.close();
             spare = null;
         }
-        if (inputQueue.size() == 0) {
-            return Collections.emptyIterator();
-        }
-        List<Row> list = new ArrayList<>(inputQueue.size());
-        List<Page> result = new ArrayList<>();
-        ResultBuilder[] builders = null;
         boolean success = false;
+        List<Row> list = null;
+        ResultBuilder[] builders = null;
+        List<Page> result = new ArrayList<>();
+        // TODO: optimize case where all the queues are empty
         try {
             while (inputQueue.size() > 0) {
                 list.add(inputQueue.pop());
@@ -468,6 +498,16 @@ public class TopNOperator implements Operator, Accountable {
             Collections.reverse(list);
             inputQueue.close();
             inputQueue = null;
+
+            /*
+for (var entry : inputQueues.entrySet()) {
+                Queue inputQueue = entry.getValue();
+
+                list = new ArrayList<>(inputQueue.size());
+                builders = null;
+                while (inputQueue.size() > 0) {
+                    list.add(inputQueue.pop());
+*/
 
             int p = 0;
             int size = 0;
@@ -487,7 +527,30 @@ public class TopNOperator implements Operator, Accountable {
                     }
                     p = 0;
                 }
+                Collections.reverse(list);
 
+
+/*
+                int p = 0;
+                int size = 0;
+                for (int i = 0; i < list.size(); i++) {
+                    if (builders == null) {
+                        size = Math.min(maxPageSize, list.size() - i);
+                        builders = new ResultBuilder[elementTypes.size()];
+                        for (int b = 0; b < builders.length; b++) {
+                            builders[b] = ResultBuilder.resultBuilderFor(
+                                blockFactory,
+                                elementTypes.get(b),
+                                encoders.get(b).toUnsortable(),
+                                channelInKey(sortOrders, b),
+                                size
+                            );
+                        }
+                        p = 0;
+                    }
+
+                    Row row = list.get(i);
+*/
                 try (Row row = list.get(i)) {
                     BytesRef keys = row.keys.bytesRefView();
                     for (SortOrder so : sortOrders) {
@@ -513,6 +576,7 @@ public class TopNOperator implements Operator, Accountable {
                     }
 
                     list.set(i, null);
+//                    row.close();
 
                     p++;
                     if (p == size) {
@@ -531,8 +595,8 @@ public class TopNOperator implements Operator, Accountable {
                         builders = null;
                     }
                 }
+                assert builders == null;
             }
-            assert builders == null;
             success = true;
             return result.iterator();
         } finally {
@@ -574,24 +638,15 @@ public class TopNOperator implements Operator, Accountable {
 
     @Override
     public void close() {
-        Releasables.closeExpectNoException(
-            /*
-             * The spare is used during most collections. It's cleared when this Operator
-             * is finish()ed. So it could be null here.
-             */
-            spare,
-            /*
-             * The inputQueue is a min heap of all live rows. Closing it will close all
-             * the rows it contains and all decrement the breaker for the size of
-             * the heap itself.
-             */
-            inputQueue,
-            /*
-             * If we're in the process of outputting pages then output will contain all
-             * allocated but un-emitted pages.
-             */
-            output == null ? null : Releasables.wrap(() -> Iterators.map(output, p -> p::releaseBlocks))
-        );
+        List<Releasable> releasables = new ArrayList<>();
+        releasables.addAll(inputQueues.values().stream().map(Releasables::wrap).toList());
+        releasables.add(output == null ? null : Releasables.wrap(() -> Iterators.map(output, p -> p::releaseBlocks)));
+        /*
+         * If we close before calling finish then spare and inputQueue will be live rows
+         * that need closing. If we close after calling finish then the output iterator
+         * will contain pages of results that have yet to be returned.
+         */
+        Releasables.closeExpectNoException(spare, Releasables.wrap(releasables));
     }
 
     private static final long SHALLOW_SIZE = RamUsageEstimator.shallowSizeOfInstance(TopNOperator.class) + RamUsageEstimator
@@ -599,6 +654,7 @@ public class TopNOperator implements Operator, Accountable {
 
     @Override
     public long ramBytesUsed() {
+        long ramBytesUsedSum = inputQueues.values().stream().mapToLong(Queue::ramBytesUsed).sum();
         // NOTE: this is ignoring the output iterator for now. Pages are not Accountable. Yet.
         long arrHeader = RamUsageEstimator.NUM_BYTES_ARRAY_HEADER;
         long ref = RamUsageEstimator.NUM_BYTES_OBJECT_REF;
@@ -611,11 +667,13 @@ public class TopNOperator implements Operator, Accountable {
         if (inputQueue != null) {
             size += inputQueue.ramBytesUsed();
         }
+        size += ramBytesUsedSum;
         return size;
     }
 
     @Override
     public Status status() {
+        int queueSizeSum = inputQueues.values().stream().mapToInt(Queue::size).sum();
         return new TopNOperatorStatus(
             receiveNanos,
             emitNanos,
@@ -630,14 +688,17 @@ public class TopNOperator implements Operator, Accountable {
 
     @Override
     public String toString() {
+        int queueSizeSum = inputQueues.values().stream().mapToInt(Queue::size).sum();
         return "TopNOperator[count="
-            + inputQueue
+            + queueSizeSum
             + ", elementTypes="
             + elementTypes
             + ", encoders="
             + encoders
             + ", sortOrders="
             + sortOrders
+            + ", partitionByChannel="
+            + partitionByChannel
             + "]";
     }
 

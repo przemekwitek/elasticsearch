@@ -140,16 +140,14 @@ public class ChangePoint extends UnaryPlan
 
     @Override
     public LogicalPlan surrogate() {
-        OrderBy orderBy = new OrderBy(source(), child(), List.of(order()));
-        // The first Limit of N+1 data points is necessary to generate a possible warning,
-        Limit limit = new Limit(
+        TopN topN = new TopN(
             source(),
-            new Literal(Source.EMPTY, ChangePointOperator.INPUT_VALUE_COUNT_LIMIT + 1, DataType.INTEGER),
-            orderBy
+            child(),
+            List.of(order()),
+            // The Limit of N+1 data points is necessary to generate a possible warning
+            new Literal(Source.EMPTY, ChangePointOperator.INPUT_VALUE_COUNT_LIMIT + 1, DataType.INTEGER)
         );
-        ChangePoint changePoint = new ChangePoint(source(), limit, value, key, targetType, targetPvalue);
-        // The second Limit of N data points is to truncate the output.
-        return new Limit(source(), new Literal(Source.EMPTY, ChangePointOperator.INPUT_VALUE_COUNT_LIMIT, DataType.INTEGER), changePoint);
+        return new ChangePoint(source(), topN, value, key, targetType, targetPvalue);
     }
 
     @Override
