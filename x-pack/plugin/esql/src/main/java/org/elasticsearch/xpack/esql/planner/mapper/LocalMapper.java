@@ -82,7 +82,7 @@ public class LocalMapper {
         }
 
         if (unary instanceof TopN topN) {
-            return new TopNExec(topN.source(), mappedChild, topN.order(), topN.limit(), null);
+            return new TopNExec(topN.source(), mappedChild, topN.partitionField(), topN.order(), topN.limit(), null);
         }
 
         //

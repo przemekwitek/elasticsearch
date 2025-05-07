@@ -129,6 +129,7 @@ public class MapperUtils {
             return new ChangePointExec(
                 changePoint.source(),
                 child,
+                changePoint.partitionField(),
                 changePoint.value(),
                 changePoint.key(),
                 changePoint.targetType(),

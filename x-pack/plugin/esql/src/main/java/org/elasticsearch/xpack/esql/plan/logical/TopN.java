@@ -24,6 +24,7 @@ import java.util.Objects;
 public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
     public static final NamedWriteableRegistry.Entry ENTRY = new NamedWriteableRegistry.Entry(LogicalPlan.class, "TopN", TopN::new);
 
+    private final Expression partitionField;
     private final List<Order> order;
     private final Expression limit;
     /**
@@ -32,8 +33,9 @@ public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
      */
     private final transient boolean local;
 
-    public TopN(Source source, LogicalPlan child, List<Order> order, Expression limit, boolean local) {
+    public TopN(Source source, LogicalPlan child, Expression partitionField, List<Order> order, Expression limit, boolean local) {
         super(source, child);
+        this.partitionField = partitionField;
         this.order = order;
         this.limit = limit;
         this.local = local;
@@ -43,6 +45,7 @@ public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
         this(
             Source.readFrom((PlanStreamInput) in),
             in.readNamedWriteable(LogicalPlan.class),
+            in.readOptionalNamedWriteable(Expression.class),
             in.readCollectionAsList(Order::new),
             in.readNamedWriteable(Expression.class),
             false
@@ -53,6 +56,7 @@ public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
     public void writeTo(StreamOutput out) throws IOException {
         Source.EMPTY.writeTo(out);
         out.writeNamedWriteable(child());
+        out.writeOptionalNamedWriteable(partitionField());
         out.writeCollection(order);
         out.writeNamedWriteable(limit);
     }
@@ -69,12 +73,12 @@ public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
 
     @Override
     protected NodeInfo<TopN> info() {
-        return NodeInfo.create(this, TopN::new, child(), order, limit, local);
+        return NodeInfo.create(this, TopN::new, child(), partitionField, order, limit, local);
     }
 
     @Override
     public TopN replaceChild(LogicalPlan newChild) {
-        return new TopN(source(), newChild, order, limit, local);
+        return new TopN(source(), newChild, partitionField, order, limit, local);
     }
 
     public TopN withLocal(boolean local) {
@@ -83,6 +87,10 @@ public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
 
     public boolean local() {
         return local;
+    }
+
+    public Expression partitionField() {
+        return partitionField;
     }
 
     public Expression limit() {
@@ -95,14 +103,14 @@ public class TopN extends UnaryPlan implements PipelineBreaker, ExecutesOn {
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), order, limit, local);
+        return Objects.hash(super.hashCode(), partitionField, order, limit, local);
     }
 
     @Override
     public boolean equals(Object obj) {
         if (super.equals(obj)) {
             var other = (TopN) obj;
-            return Objects.equals(order, other.order) && Objects.equals(limit, other.limit) && local == other.local;
+            return Objects.equals(partitionField, other.partitionField) && Objects.equals(order, other.order) && Objects.equals(limit, other.limit) && local == other.local;
         }
         return false;
     }

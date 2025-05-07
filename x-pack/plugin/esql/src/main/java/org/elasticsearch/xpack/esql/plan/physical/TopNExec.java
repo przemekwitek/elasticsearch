@@ -30,6 +30,7 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
     );
 
     private final Expression limit;
+    private final Expression partitionField;
     private final List<Order> order;
 
     /**
@@ -38,8 +39,16 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
      */
     private final Integer estimatedRowSize;
 
-    public TopNExec(Source source, PhysicalPlan child, List<Order> order, Expression limit, Integer estimatedRowSize) {
+    public TopNExec(
+        Source source,
+        PhysicalPlan child,
+        Expression partitionField,
+        List<Order> order,
+        Expression limit,
+        Integer estimatedRowSize
+    ) {
         super(source, child);
+        this.partitionField = partitionField;
         this.order = order;
         this.limit = limit;
         this.estimatedRowSize = estimatedRowSize;
@@ -49,6 +58,7 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
         this(
             Source.readFrom((PlanStreamInput) in),
             in.readNamedWriteable(PhysicalPlan.class),
+            in.readOptionalNamedWriteable(Expression.class),
             in.readCollectionAsList(org.elasticsearch.xpack.esql.expression.Order::new),
             in.readNamedWriteable(Expression.class),
             in.readOptionalVInt()
@@ -59,6 +69,7 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
     public void writeTo(StreamOutput out) throws IOException {
         Source.EMPTY.writeTo(out);
         out.writeNamedWriteable(child());
+        out.writeOptionalNamedWriteable(partitionField());
         out.writeCollection(order());
         out.writeNamedWriteable(limit());
         out.writeOptionalVInt(estimatedRowSize());
@@ -71,16 +82,20 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
 
     @Override
     protected NodeInfo<TopNExec> info() {
-        return NodeInfo.create(this, TopNExec::new, child(), order, limit, estimatedRowSize);
+        return NodeInfo.create(this, TopNExec::new, child(), partitionField, order, limit, estimatedRowSize);
     }
 
     @Override
     public TopNExec replaceChild(PhysicalPlan newChild) {
-        return new TopNExec(source(), newChild, order, limit, estimatedRowSize);
+        return new TopNExec(source(), newChild, partitionField, order, limit, estimatedRowSize);
     }
 
     public Expression limit() {
         return limit;
+    }
+
+    public Expression partitionField() {
+        return partitionField;
     }
 
     public List<Order> order() {
@@ -98,16 +113,17 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
     @Override
     public PhysicalPlan estimateRowSize(State state) {
         final List<Attribute> output = output();
-        final boolean needsSortedDocIds = output.stream().anyMatch(a -> a.dataType() == DataType.DOC_DATA_TYPE);
+        final boolean needsSortedDocIds = output.stream()
+            .anyMatch(a -> a.typeResolved().resolved() && a.dataType() == DataType.DOC_DATA_TYPE);
         state.add(needsSortedDocIds, output);
         int size = state.consumeAllFields(true);
         size = Math.max(size, 1);
-        return Objects.equals(this.estimatedRowSize, size) ? this : new TopNExec(source(), child(), order, limit, size);
+        return Objects.equals(this.estimatedRowSize, size) ? this : new TopNExec(source(), child(), partitionField, order, limit, size);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), order, limit, estimatedRowSize);
+        return Objects.hash(super.hashCode(), partitionField, order, limit, estimatedRowSize);
     }
 
     @Override
@@ -115,7 +131,8 @@ public class TopNExec extends UnaryExec implements EstimatesRowSize {
         boolean equals = super.equals(obj);
         if (equals) {
             var other = (TopNExec) obj;
-            equals = Objects.equals(order, other.order)
+            equals = Objects.equals(partitionField, other.partitionField)
+                && Objects.equals(order, other.order)
                 && Objects.equals(limit, other.limit)
                 && Objects.equals(estimatedRowSize, other.estimatedRowSize);
         }

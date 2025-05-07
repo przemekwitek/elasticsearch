@@ -671,7 +671,7 @@ public class LogicalPlanBuilder extends ExpressionBuilder {
             parsedTargetPvalueColumn == null ? "pvalue" : parsedTargetPvalueColumn.name(),
             DataType.DOUBLE
         );
-        return child -> new ChangePoint(src, child, value, key, targetType, targetPvalue);
+        return child -> new ChangePoint(src, child, value, key, new EmptyAttribute(src), targetType, targetPvalue);
     }
 
     private static Tuple<Mode, String> parsePolicyName(EsqlBaseParser.EnrichPolicyNameContext ctx) {
